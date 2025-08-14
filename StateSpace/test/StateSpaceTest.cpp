@@ -30,29 +30,28 @@ void test_multiple_dimensions() {
 void test_error_throwing(){
     StateSpace mySpace(1, 5);
 
-    try {
-        mySpace.get({6});
-        throw runtime_error("out_of_range exception was not thrown when it should have been");
-        return;
-    } catch (const out_of_range& e){}
+    test::assertThrow([mySpace](){mySpace.get({6});}, 
+                    typeid(std::out_of_range), 
+                    "out_of_range exception was not thrown when it should have been");
 
-    try {
-        mySpace.get({5, 5});
-        throw runtime_error("invalid_argument exception was not thrown when it should have been");
-    } catch (const invalid_argument& e){}
+    test::assertThrow([mySpace](){mySpace.get({5, 5});}, 
+                    typeid(std::invalid_argument), 
+                    "out_of_range exception was not thrown when it should have been");
+
 
     StateSpace mySpace2(4, 4);
     
-    try {
-        mySpace2.get({1,1,1,4});
-        throw runtime_error("out_of_range exception was not thrown when it should have been");
-        return;
-    } catch (const out_of_range& e){}
+    test::assertThrow([&mySpace2](){mySpace2.get({1,1,1,5});}, 
+                    typeid(std::out_of_range), 
+                    "out_of_range exception was not thrown when it should have been");
 
-    try {
-        mySpace2.get({5, 5});
-        throw runtime_error("invalid_argument exception was not thrown when it should have been");
-    } catch (const invalid_argument& e){}
+    test::assertThrow([&mySpace2](){mySpace2.set({1,1,1,5}, 1.0);}, 
+                    typeid(std::out_of_range), 
+                    "out_of_range exception was not thrown when it should have been");
+
+    test::assertThrow([&mySpace2](){mySpace2.get({5, 5});}, 
+                    typeid(std::invalid_argument), 
+                    "out_of_range exception was not thrown when it should have been");
 
 }
 
