@@ -75,7 +75,7 @@ namespace test {
             return;
         }
 
-        cout << "Success: completed successfully" << endl;    
+        cout << "Success!" << endl;    
     }
     
 }
