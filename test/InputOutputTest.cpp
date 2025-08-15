@@ -6,41 +6,99 @@
 
 using namespace std;
 
-TEST(TestCommandLine, TestsModel1D){
-    CommandLineInputOutput myModel;
+TEST(TestCommandLine, testCLIOinnit){
+    // use clio input output
+    CommandLineInputOutput clio;
 
-    // test functionality
-    EXPECT_EQ(1, myModel.get_next_query().size());
-    EXPECT_EQ(0, myModel.get_state_space().get({1}));
-    EXPECT_NO_THROW(myModel.update_prediction({1}, 1));
-    EXPECT_EQ(1, myModel.get_state_space().get({1}));
-
-    // check that created array is correct size
-    EXPECT_NO_THROW(myModel.get_state_space().get({0}));
-    EXPECT_NO_THROW(myModel.get_state_space().get({9}));
-    EXPECT_THROW(myModel.get_state_space().get({10}), std::out_of_range);
+    InputOutput* io = InputOutput::get_instance();
+    EXPECT_NE(io, nullptr);
+    
 }
 
-TEST(TestModel, TestsModelND){
-    for (int i = 1; i < 6; i++){
-        DumbModel myModel(i, 10);
-        
-        vector<int> queryPoint(i, 0);
+// basic test of clio with 0d query
+TEST(TestCommandLine, testingCLIO__1){
+    // use clio input output
+    CommandLineInputOutput clio;
 
-        // test functionality
-        EXPECT_EQ(i, myModel.get_next_query().size());
-        EXPECT_EQ(0, myModel.get_state_space().get(queryPoint));
-        EXPECT_NO_THROW(myModel.update_prediction(queryPoint, 1));
-        EXPECT_EQ(1, myModel.get_state_space().get(queryPoint));
+    InputOutput* io = InputOutput::get_instance();
+    
+    // Redirect cout to a stringstream
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
 
-        // check that created array is correct size
-        for (int j = 0; j < i; j++){
-            EXPECT_NO_THROW(myModel.get_state_space().get(queryPoint));
-            queryPoint[j] = 9;
-            EXPECT_NO_THROW(myModel.get_state_space().get(queryPoint));
-            queryPoint[j] = 10;
-            EXPECT_THROW(myModel.get_state_space().get(queryPoint), std::out_of_range);
-            queryPoint[j] = 9;
-        }
-    }
+    std::istringstream input("42\n");
+    std::streambuf* oldCin = std::cin.rdbuf(input.rdbuf());
+
+    std::vector<int> query = {0,0,0};
+    double result = io->send_query_recieve_result(query);
+    std::cout.rdbuf(oldCout);
+
+    EXPECT_EQ(result, 42);
+    EXPECT_EQ(buffer.str(), "0,0,0\n");
+}
+
+// test with query with non zero values
+TEST(TestCommandLine, testingCLIO__2){
+    // use clio input output
+    CommandLineInputOutput clio;
+
+    InputOutput* io = InputOutput::get_instance();
+    
+    // Redirect cout to a stringstream
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
+
+    std::istringstream input("1.001\n");
+    std::streambuf* oldCin = std::cin.rdbuf(input.rdbuf());
+
+    std::vector<int> query = {1,2,3};
+    double result = io->send_query_recieve_result(query);
+    std::cout.rdbuf(oldCout);
+
+    EXPECT_EQ(result, 1.001);
+    EXPECT_EQ(buffer.str(), "1,2,3\n");
+}
+
+// test with query size of 1
+TEST(TestCommandLine, testingCLIO__3){
+    // use clio input output
+    CommandLineInputOutput clio;
+
+    InputOutput* io = InputOutput::get_instance();
+    
+    // Redirect cout to a stringstream
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
+
+    std::istringstream input("1.001\n");
+    std::streambuf* oldCin = std::cin.rdbuf(input.rdbuf());
+
+    std::vector<int> query = {1};
+    double result = io->send_query_recieve_result(query);
+    std::cout.rdbuf(oldCout);
+
+    EXPECT_EQ(result, 1.001);
+    EXPECT_EQ(buffer.str(), "1\n");
+}
+
+// test expected when non num is input
+TEST(TestCommandLine, testingCLIO__4){
+    // use clio input output
+    CommandLineInputOutput clio;
+
+    InputOutput* io = InputOutput::get_instance();
+    
+    // Redirect cout to a stringstream
+    std::stringstream buffer;
+    std::streambuf* oldCout = std::cout.rdbuf(buffer.rdbuf());
+
+    std::istringstream input("test\n");
+    std::streambuf* oldCin = std::cin.rdbuf(input.rdbuf());
+
+    std::vector<int> query = {1,2,3};
+    double result = io->send_query_recieve_result(query);
+    std::cout.rdbuf(oldCout);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(buffer.str(), "1,2,3\n");
 }
