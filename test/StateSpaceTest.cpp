@@ -1,7 +1,7 @@
 #include <iostream>
 #include <gtest/gtest.h>
 
-#include "../StateSpace/StateSpace.cpp"
+#include "../src/StateSpace/StateSpace.cpp"
 
 using namespace std;
 
