@@ -14,5 +14,7 @@ double CommandLineInputOutput::send_query_recieve_result(std::vector<int> &query
 }
 
 void CommandLineInputOutput::output_state(StateSpace &stateSpace){
-    return;
+    std::vector<double> vec2Output = stateSpace.get_raw_representation();
+    for (int i = 0; i < vec2Output.size(); i++)
+        std::cout << i << (i = vec2Output.size()-1) ? "\n" : " ";
 }

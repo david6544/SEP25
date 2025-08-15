@@ -8,6 +8,7 @@ protected:
     static InputOutput* instance;
     InputOutput() { instance = this; }
 public:
+    ~InputOutput() { delete instance; }
     virtual ~InputOutput() = default;
     virtual double send_query_recieve_result(std::vector<int> &query) = 0;
     virtual void output_state(StateSpace &stateSpace) = 0;
