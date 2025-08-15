@@ -15,7 +15,10 @@ int StateSpace::coords_to_index(const std::vector<int>& coords) const {
 }
 
 StateSpace::StateSpace(int dimensions, int dimensionSize, double initialValues) 
-    : dimensions(dimensions), dimensionSize(dimensionSize), stateSpace(std::pow(dimensionSize, dimensions), initialValues) {}
+    :   dimensions(dimensions), 
+        dimensionSize(dimensionSize), 
+        stateSpace(std::pow(dimensionSize, dimensions), initialValues)
+    {}
 
 
 int StateSpace::get_dimensions() const {
@@ -28,6 +31,10 @@ int StateSpace::get_dimension_size() const {
 
 double StateSpace::get(const std::vector<int>& coords) const {
     return this->stateSpace[coords_to_index(coords)];
+}
+
+std::vector<double> StateSpace::get_raw_representation() const {
+    return this->stateSpace;
 }
 
 double StateSpace::set(const std::vector<int>& coords, double value) {

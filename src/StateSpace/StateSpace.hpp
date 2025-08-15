@@ -29,6 +29,8 @@ public:
     
     double get(const std::vector<int>& coords) const;
 
+    std::vector<double> get_raw_representation() const;
+
     double set(const std::vector<int>& coords, double value);
     
 };
