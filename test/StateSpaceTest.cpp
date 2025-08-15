@@ -38,9 +38,9 @@ TEST(ErrorThrowing, TestsErrorThrowing){
 
     StateSpace mySpace2(4, 4);
     
-    EXPECT_THROW(mySpace.get({1,1,1,5}), std::out_of_range);
-    EXPECT_THROW(mySpace.set({1,1,1,5}, 1), std::out_of_range);
+    EXPECT_THROW(mySpace2.get({1,1,1,5}), std::out_of_range);
+    EXPECT_THROW(mySpace2.set({1,1,1,5}, 1), std::out_of_range);
 
-    EXPECT_THROW(mySpace.get({5, 5}), std::invalid_argument);
+    EXPECT_THROW(mySpace2.get({5, 5}), std::invalid_argument);
 
 }
