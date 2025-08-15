@@ -1,3 +1,21 @@
-./vscode
-a.out
-settings.json
+# Build artifacts
+/build/
+_deps/
+
+# Compiled files
+*.o
+*.a
+*.so
+*.out
+*.exe
+*.dll
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE configuration
+/.vscode/
+.idea/
+*.sublime-project
+*.sublime
