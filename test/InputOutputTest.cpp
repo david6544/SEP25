@@ -8,17 +8,19 @@ using namespace std;
 
 TEST(TestCommandLine, testCLIOinnit){
     // use clio input output
-    CommandLineInputOutput clio;
+    CommandLineInputOutput::set_IO();
 
     InputOutput* io = InputOutput::get_instance();
     EXPECT_NE(io, nullptr);
-    
+
+    InputOutput* io2 = InputOutput::get_instance();
+    EXPECT_EQ(io, io2);
 }
 
 // basic test of clio with 0d query
 TEST(TestCommandLine, testingCLIO__1){
     // use clio input output
-    CommandLineInputOutput clio;
+    CommandLineInputOutput::set_IO();
 
     InputOutput* io = InputOutput::get_instance();
     
@@ -40,9 +42,9 @@ TEST(TestCommandLine, testingCLIO__1){
 // test with query with non zero values
 TEST(TestCommandLine, testingCLIO__2){
     // use clio input output
-    CommandLineInputOutput clio;
+    CommandLineInputOutput::set_IO();
 
-    InputOutput* io = InputOutput::get_instance();
+    InputOutput *io = InputOutput::get_instance();
     
     // Redirect cout to a stringstream
     std::stringstream buffer;
@@ -62,7 +64,7 @@ TEST(TestCommandLine, testingCLIO__2){
 // test with query size of 1
 TEST(TestCommandLine, testingCLIO__3){
     // use clio input output
-    CommandLineInputOutput clio;
+    CommandLineInputOutput::set_IO();
 
     InputOutput* io = InputOutput::get_instance();
     
@@ -84,7 +86,7 @@ TEST(TestCommandLine, testingCLIO__3){
 // test expected when non num is input
 TEST(TestCommandLine, testingCLIO__4){
     // use clio input output
-    CommandLineInputOutput clio;
+    CommandLineInputOutput::set_IO();
 
     InputOutput* io = InputOutput::get_instance();
     

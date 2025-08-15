@@ -1,5 +1,13 @@
 #include "InputOutput.hpp"
 
 InputOutput* InputOutput::instance = nullptr;
-InputOutput::InputOutput() { instance = this; }
-InputOutput* InputOutput::get_instance(){ return instance; }
+InputOutput::InputOutput() {
+    if (instance == nullptr)
+        instance = this;
+}
+InputOutput* InputOutput::get_instance(){ 
+    if (instance == nullptr){
+        throw std::runtime_error("IO instance is null - must be set before usage");
+    }
+    return instance; 
+}

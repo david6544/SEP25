@@ -2,11 +2,16 @@
 
 #include "CommandLineInputOutput.hpp"
 
+void CommandLineInputOutput::set_IO(){
+    if (instance == nullptr)
+        instance = new CommandLineInputOutput;
+}
+
 double CommandLineInputOutput::send_query_recieve_result(std::vector<int> &query){
     // output query to the CL
     for (int i = 0; i < query.size(); i++)
         std::cout << query[i] << ((i == query.size()-1) ? "\n" : ",");
-    
+
     double result;
     std::cin >> result;
 
