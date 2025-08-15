@@ -6,9 +6,12 @@ project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add src directory
-file(GLOB SRC_FILES src/*.cpp)
-add_executable(sep25_main ${SRC_FILES})
+# Gather source files, excluding main.cpp
+file(GLOB_RECURSE SRC_FILES src/*.cpp)
+list(FILTER SRC_FILES EXCLUDE REGEX ".*/main.cpp$")
+
+# Add main executable
+add_executable(sep25_main src/main.cpp ${SRC_FILES})
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
 include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 
@@ -31,7 +34,7 @@ enable_testing()
 
 # Create test executable
 file(GLOB TEST_FILES test/*.cpp)
-add_executable(sep25_tests ${TEST_FILES})
+add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
 
 # Link GoogleTest
 target_link_libraries(sep25_tests 
