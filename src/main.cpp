@@ -2,7 +2,22 @@
 
 #include "InputOutput/CommandLineInputOutput.hpp"
 #include "Models/DumbModel.hpp"
+#include "Models/LinearModel.hpp"
 
+void linearAlgorithm(int dimensions, int dimensionSize, int queries){
+    InputOutput *io = InputOutput::get_instance();
+
+    LinearModel model(dimensions, dimensionSize, queries);
+
+    for (int i = 0; i < queries; i++){
+        std::vector<int> query = model.get_next_query();
+        double result = io->send_query_recieve_result(query);
+        model.update_prediction(query, result);
+    }
+    model.update_prediction_final();
+    const auto raw_state = model.get_state_space();
+    io->output_state(raw_state);
+}
 
 void dumbAlgorithm(int dimensions, int dimensionSize, int queries){
     InputOutput *io = InputOutput::get_instance();
@@ -30,7 +45,8 @@ int main(int argc, char* argv[]) {
 
     CommandLineInputOutput::set_IO();
 
-    dumbAlgorithm(dimensions, dimensionSize, queries);
+    // dumbAlgorithm(dimensions, dimensionSize, queries);
+    linearAlgorithm(dimensions, dimensionSize, queries);
 
     return 0;
 }
