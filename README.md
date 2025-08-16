@@ -11,8 +11,23 @@ This project uses CMake as its build system. The project structure includes:
 
 - C++20 compatible compiler
 - CMake 3.16 or higher
+- MinGW ( see below instructions)
 
-### Build Instructions
+### MinGW Installation
+1. Install MinGW:
+```bash
+sudo apt update
+sudo apt install mingw-w64
+```
+
+2. Validate Installation:
+```bash
+which x86_64-w64-mingw32-gcc 
+which x86_64-w64-mingw32-g++
+```
+
+
+### Local Build Instructions
 
 1. Create the build directory and navigate to it:
 `mkdir -p build && cd build`
@@ -20,7 +35,14 @@ This project uses CMake as its build system. The project structure includes:
 `cmake ..`
 3. Build the project:
 `cmake --build .`
-   ```
+
+### Windows Cross-Compilation Instructions
+1. Create build folder `mkdir build-windows && cd build-windows`
+2. Generate the build files `cmake -DCMAKE_TOOLCHAIN_FILE=../windows-toolchain.cmake ..`
+3. Build the project `cmake --build . --config Release`
+4. .exe is located in `./build-windows/sep25_main.exe` this cannot be run locally on a linux machine
+can be copied to a windows machine for testing.
+
 
 ### Running the Application
 
