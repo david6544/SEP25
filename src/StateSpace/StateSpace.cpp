@@ -1,5 +1,7 @@
 #include "StateSpace.hpp"
 
+#include <string>
+
 int StateSpace::coords_to_index(const std::vector<int>& coords) const {
     if (coords.size() != this->dimensions) 
         throw std::invalid_argument("Index has Invalid Number of Dimensions");
