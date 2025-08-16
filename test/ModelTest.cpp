@@ -5,7 +5,7 @@
 
 using namespace std;
 
-TEST(OneDimensionalModel, TestsModel1D){
+TEST(TestModel, TestsModel1D){
     DumbModel myModel(1, 10);
 
     // test functionality
@@ -20,7 +20,7 @@ TEST(OneDimensionalModel, TestsModel1D){
     EXPECT_THROW(myModel.get_state_space().get({10}), std::out_of_range);
 }
 
-TEST(MultDimensionModel, TestsModelND){
+TEST(TestModel, TestsModelND){
     for (int i = 1; i < 6; i++){
         DumbModel myModel(i, 10);
         
