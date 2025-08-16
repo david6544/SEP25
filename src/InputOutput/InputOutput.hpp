@@ -8,8 +8,8 @@ protected:
     static InputOutput* instance;
     InputOutput();
 public:
-    virtual double send_query_recieve_result(std::vector<int> &query) = 0;
-    virtual void output_state(StateSpace &stateSpace) = 0;
+    virtual double send_query_recieve_result(const std::vector<int> &query) = 0;
+    virtual void output_state(const StateSpace &stateSpace) = 0;
     
     static InputOutput* get_instance();
 };

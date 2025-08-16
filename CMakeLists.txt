@@ -45,3 +45,10 @@ target_link_libraries(sep25_tests
 # Add tests
 add_test(NAME UnitTests COMMAND sep25_tests)
 
+# If building with MinGW (Windows cross-compile), make standalone exe
+if(MINGW)
+    message(STATUS "Building with MinGW, enabling static linking")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
+
+
