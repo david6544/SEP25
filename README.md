@@ -36,7 +36,7 @@ which x86_64-w64-mingw32-g++
 3. Build the project:
 `cmake --build .`
 
-### Windows Cross Compilation Instructions
+### Windows Cross-Compilation Instructions
 1. Create build folder `mkdir build-windows && cd build-windows`
 2. Generate the build files `cmake -DCMAKE_TOOLCHAIN_FILE=../windows-toolchain.cmake ..`
 3. Build the project `cmake --build . --config Release`
