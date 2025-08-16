@@ -1,6 +1,7 @@
 # Build artifacts
 /build/
 _deps/
+/build-windows/
 
 # Compiled files
 *.o

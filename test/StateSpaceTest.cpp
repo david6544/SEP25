@@ -5,14 +5,14 @@
 
 using namespace std;
 
-TEST(OneDimensionAccess, TestsGetAndSetIn1D){
+TEST(TestStateSpace, TestsGetAndSetIn1D){
     StateSpace mySpace(1, 5);
     ASSERT_EQ(0.0, mySpace.get({1}));
     mySpace.set({1}, -1);
     ASSERT_EQ(-1.0, mySpace.get({1}));
 }
 
-TEST(MultDimensionAccess, TestsGetAndSetInND){
+TEST(TestStateSpace, TestsGetAndSetInND){
     for (int i = 1; i < 6; i++){
         StateSpace mySpace(i, 10);
         EXPECT_EQ(i, mySpace.get_dimensions());
@@ -26,7 +26,7 @@ TEST(MultDimensionAccess, TestsGetAndSetInND){
     }
 }
 
-TEST(ErrorThrowing, TestsErrorThrowing){
+TEST(TestStateSpace, TestsErrorThrowing){
     StateSpace mySpace(1, 5);
 
     EXPECT_THROW(mySpace.get({6}), std::out_of_range);
