@@ -3,6 +3,11 @@
 
 #include "Model.hpp"
 
+/**
+ * @brief The DumbModel is merely for testing the client - It 
+ * randomly picks query points and sets statespace[query point] = returned value
+ * 
+ */
 class DumbModel : public Model {
 public:
     DumbModel(int dimensions, int dimensionSize);
