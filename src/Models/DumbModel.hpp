@@ -3,11 +3,16 @@
 
 #include "Model.hpp"
 
+/**
+ * @brief The DumbModel is merely for testing the client - It 
+ * randomly picks query points and sets statespace[query point] = returned value
+ * 
+ */
 class DumbModel : public Model {
 public:
     DumbModel(int dimensions, int dimensionSize);
     std::vector<int> get_next_query() override;
-    void update_prediction(std::vector<int> query, double result) override;
+    void update_prediction(const std::vector<int> &query, double result) override;
 };
 
 

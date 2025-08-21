@@ -20,7 +20,7 @@ std::vector<int> DumbModel::get_next_query() {
     return nextQuery;
 }
 
-void DumbModel::update_prediction(std::vector<int> query, double result) {
+void DumbModel::update_prediction(const std::vector<int> &query, double result) {
     stateSpace->set(query, result);
 }
 
