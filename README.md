@@ -37,10 +37,9 @@ which x86_64-w64-mingw32-g++
 `cmake --build .`
 
 ### Windows Cross-Compilation Instructions
-1. Create build folder `mkdir build-windows && cd build-windows`
-2. Generate the build files `cmake -DCMAKE_TOOLCHAIN_FILE=../windows-toolchain.cmake ..`
-3. Build the project `cmake --build . --config Release`
-4. .exe is located in `./build-windows/sep25_main.exe` this cannot be run locally on a linux machine
+1. Create build folder `mkdir build-windows`
+2. Generate the build files `cmake -B build-win -S . -DCMAKE_TOOLCHAIN_FILE=windows-toolchain.cmake -DCMAKE_BUILD_TYPE=Release &&  cmake --build build-windows`
+4. .exe is located in `./build-windows/sep25_main_#######.exe` this cannot be run locally on a linux machine
 can be copied to a windows machine for testing.
 
 
