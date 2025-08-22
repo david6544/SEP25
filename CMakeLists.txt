@@ -1,45 +1,68 @@
 cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
+cmake_minimum_required(VERSION 3.16)
+project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
+
+# Detect if building natively or with a toolchain
+if(CMAKE_TOOLCHAIN_FILE)
+    message(STATUS "Using toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+else()
+    message(STATUS "Building natively on ${CMAKE_SYSTEM_NAME}")
+endif()
+
+# Prevent reusing a cross-compilation build dir for native builds
+if(NOT CMAKE_TOOLCHAIN_FILE AND CMAKE_CROSSCOMPILING)
+    message(FATAL_ERROR "This build directory was configured for cross-compilation. "
+                        "Use a fresh build directory for native builds.")
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 # --- GIT CHECKS (host side) ---
-find_package(Git QUIET)
-if(NOT Git_FOUND)
-    message(FATAL_ERROR "Git not found, cannot verify commit status.")
+if(CMAKE_CROSSCOMPILING)
+    # --- GIT CHECKS (only for cross-compilation) ---
+    find_package(Git QUIET)
+    if(NOT Git_FOUND)
+        message(FATAL_ERROR "Git not found, cannot verify commit status.")
+    endif()
+
+    # Ensure repository has at least one commit
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --verify HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE GIT_HEAD_RESULT
+    )
+    if(NOT GIT_HEAD_RESULT EQUAL 0)
+        message(FATAL_ERROR "No commits found in repository. Please commit before building.")
+    endif()
+
+    # Ensure working tree is clean
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} status --porcelain
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_STATUS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT "${GIT_STATUS}" STREQUAL "")
+        message(FATAL_ERROR "Uncommitted changes detected. Commit or stash all changes before building.")
+    endif()
+
+    # Get commit hash
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    message(STATUS "Cross-compiling from clean commit: ${GIT_COMMIT_HASH_SHORT}")
+else()
+    set(GIT_COMMIT_HASH_SHORT "dev") # Default name for native builds
+    message(STATUS "Native build (no Git enforcement)")
 endif()
-
-# Ensure repository has at least one commit
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} rev-parse --verify HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    RESULT_VARIABLE GIT_HEAD_RESULT
-)
-if(NOT GIT_HEAD_RESULT EQUAL 0)
-    message(FATAL_ERROR "No commits found in repository. Please commit before building.")
-endif()
-
-# Ensure working tree is clean
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} status --porcelain
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_STATUS
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if(NOT "${GIT_STATUS}" STREQUAL "")
-    message(FATAL_ERROR "Uncommitted changes detected. Commit or stash all changes before building.")
-endif()
-
-# Get commit hash
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-message(STATUS "Building from clean commit: ${GIT_COMMIT_HASH_SHORT}")
 
 # --- SOURCES ---
 file(GLOB_RECURSE SRC_FILES src/*.cpp)
