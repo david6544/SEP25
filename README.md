@@ -40,10 +40,11 @@ In order to change the model that the build is using update the `ALGORITHM` valu
 `cmake --build .`
 
 ### Windows Cross-Compilation Instructions
-1. Create build folder `mkdir build-windows && cd build-windows`
-2. Generate the build files `cmake -DCMAKE_TOOLCHAIN_FILE=../windows-toolchain.cmake ..`
-3. Build the project `cmake --build . --config Release`
-4. .exe is located in `./build-windows/sep25_main.exe` this cannot be run locally on a linux machine
+1. From the project root directory use the following to build the project and compile the executable 
+```bash
+rm -rf build-windows && cmake -B build-windows -S . -DCMAKE_TOOLCHAIN_FILE=windows-toolchain.cmake -DCMAKE_BUILD_TYPE=Release &&  cmake --build build-windows
+```
+2. .exe is located in `./build-windows/sep25_main_#######.exe` this cannot be run locally on a linux machine
 can be copied to a windows machine for testing.
 
 
