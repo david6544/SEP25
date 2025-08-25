@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+# Selected Algorithm (change text in " ")
+set(ALGORITHM "DUMB")
+
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Set C++ standard
@@ -12,6 +15,12 @@ list(FILTER SRC_FILES EXCLUDE REGEX ".*/main.cpp$")
 
 # Add main executable
 add_executable(sep25_main src/main.cpp ${SRC_FILES})
+
+message(STATUS "Selected algorithm: ${ALGORITHM}")
+
+# Add compile definition based on chosen algorithm
+target_compile_definitions(sep25_main PUBLIC ${ALGORITHM})
+
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
 include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 
@@ -35,6 +44,7 @@ enable_testing()
 # Create test executable
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
+target_compile_definitions(sep25_tests PUBLIC ${ALGORITHM})
 
 # Link GoogleTest
 target_link_libraries(sep25_tests 
