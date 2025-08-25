@@ -2,16 +2,16 @@
 #define MODEL_H
 #include <vector>
 
-#include "../StateSpace/StateSpace.hpp"
+#include "../StateSpace/ArrayStateSpace.hpp"
 
 class Model {
 protected:
-    StateSpace* stateSpace = nullptr;
+    ArrayStateSpace* stateSpace = nullptr;
 public:
-        Model(int dimensions, int dimensionSize): stateSpace(new StateSpace(dimensions, dimensionSize)) {};
+        Model(int dimensions, int dimensionSize): stateSpace(new ArrayStateSpace(dimensions, dimensionSize)) {};
         virtual std::vector<int> get_next_query() = 0;
         virtual void update_prediction(const std::vector<int> &query, double result) = 0;
-        StateSpace get_state_space() const { return *stateSpace; };
+        ArrayStateSpace get_state_space() const { return *stateSpace; };
 };
 
 

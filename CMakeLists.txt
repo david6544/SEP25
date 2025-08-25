@@ -15,6 +15,11 @@ add_executable(sep25_main src/main.cpp ${SRC_FILES})
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
 include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 
+# Add performance test executable
+file(GLOB PERFORMANCE_FILES performanceTester/*.cpp)
+add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
+target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
+include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 
 # Download and configure GoogleTest
 include(FetchContent)

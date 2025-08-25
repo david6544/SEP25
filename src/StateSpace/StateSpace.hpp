@@ -1,38 +1,29 @@
 /* 
 
-StateSpace.hpp
-Implements a StateSpace class that allows for interactions with an n-dimensional integer indexed array.
+ArrayArrayStateSpace.hpp
+Implements a ArrayStateSpace class that allows for interactions with an n-dimensional integer indexed array.
 
 */
 
 
-#ifndef STATESPACE_H
-#define STATESPACE_H
+#ifndef STATE_SPACE_H
+#define STATE_SPACE_H
 #include <vector>
 #include <iostream>
 #include <cmath>
 
 class StateSpace {
-private:
-    std::vector<double> stateSpace;
-    const int dimensions;
-    const int dimensionSize;
-
-    int coords_to_index(const std::vector<int>& coords) const;
-
+protected:
+    int dimensions;
+    int dimensionSize;
 public:
-    StateSpace(int dimensions, int dimensionSize, double initialValues = 0.0);
-
-    int get_dimensions() const;
-
-    int get_dimension_size() const;
+    StateSpace(int dimensions, int dimensionSize): dimensions(dimensions), dimensionSize(dimensionSize) {}
     
-    double get(const std::vector<int>& coords) const;
+    virtual int get_dimensions() const = 0;
 
-    std::vector<double> get_raw_representation() const;
-
-    double set(const std::vector<int>& coords, double value);
+    virtual int get_dimension_size() const = 0;
     
+    virtual double get(const std::vector<int>& coords) const = 0;
 };
 
-#endif // STATESPACE_H
+#endif // STATE_SPACE_H
