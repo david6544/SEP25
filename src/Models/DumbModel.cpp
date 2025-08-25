@@ -1,3 +1,4 @@
+#if defined(DUMB) || defined(TESTING)
 #include <vector>
 #include <random>
 #include <ctime>
@@ -24,3 +25,4 @@ void DumbModel::update_prediction(const std::vector<int> &query, double result) 
     stateSpace->set(query, result);
 }
 
+#endif // DUMB || TESTING

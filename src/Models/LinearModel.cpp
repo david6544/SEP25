@@ -1,4 +1,4 @@
-
+#if defined(LINEAR) || defined(TESTING)
 #include <vector>
 #include <random>
 #include <ctime>
@@ -139,4 +139,6 @@ void LinearModel::update_prediction_final() {
 void LinearModel::update_prediction(const std::vector<int> &query, double result) {
     stateSpace->set(query, result);
 }
+
+#endif // LINEAR || TESTING
 

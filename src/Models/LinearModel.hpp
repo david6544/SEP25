@@ -1,4 +1,4 @@
-
+#if defined(LINEAR) || defined(TESTING)
 #ifndef LINEAR_MODEL_H
 #define LINEAR_MODEL_H
 
@@ -21,3 +21,4 @@ private:
 
 
 #endif //LINEAR_MODEL_H
+#endif // LINEAR || TESTING

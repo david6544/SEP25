@@ -96,7 +96,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
-target_compile_definitions(sep25_tests PUBLIC ${ALGORITHM})
+target_compile_definitions(sep25_tests PUBLIC "TESTING")
 
 # Link GoogleTest
 target_link_libraries(sep25_tests 

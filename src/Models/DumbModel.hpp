@@ -1,3 +1,4 @@
+#if defined(DUMB) || defined(TESTING)
 #ifndef DUMB_MODEL_H
 #define DUMB_MODEL_H
 
@@ -16,4 +17,5 @@ public:
 };
 
 
-#endif //DUMB_MODEL_H
+#endif // DUMB_MODEL_H
+#endif // DUMB || TESTING
