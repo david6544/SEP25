@@ -5,7 +5,7 @@
 
 #include "DumbModel.hpp"
 
-DumbModel::DumbModel(int dimensions, int dimensionSize) : Model(dimensions, dimensionSize) {
+DumbModel::DumbModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {
     std::srand(std::time(nullptr));
 }
 
