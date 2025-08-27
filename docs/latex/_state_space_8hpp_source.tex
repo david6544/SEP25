@@ -1,0 +1,44 @@
+\doxysection{State\+Space.\+hpp}
+\hypertarget{_state_space_8hpp_source}{}\label{_state_space_8hpp_source}\index{/Users/omarbadr/Documents/Year 4/Sem 2/SEP/SEP25/SEP25/src/StateSpace/StateSpace.hpp@{/Users/omarbadr/Documents/Year 4/Sem 2/SEP/SEP25/SEP25/src/StateSpace/StateSpace.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/*\ }}
+\DoxyCodeLine{00002\ \textcolor{comment}{}}
+\DoxyCodeLine{00003\ \textcolor{comment}{StateSpace.hpp}}
+\DoxyCodeLine{00004\ \textcolor{comment}{Implements\ a\ StateSpace\ class\ that\ allows\ for\ interactions\ with\ an\ n-\/dimensional\ integer\ indexed\ array.}}
+\DoxyCodeLine{00005\ \textcolor{comment}{}}
+\DoxyCodeLine{00006\ \textcolor{comment}{*/}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#ifndef\ STATESPACE\_H}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#define\ STATESPACE\_H}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{class\ }StateSpace\ \{}
+\DoxyCodeLine{00016\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00017\ \ \ \ \ std::vector<double>\ stateSpace;}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ dimensions;}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ dimensionSize;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keywordtype}{int}\ coords\_to\_index(\textcolor{keyword}{const}\ std::vector<int>\&\ coords)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00024\ \ \ \ \ StateSpace(\textcolor{keywordtype}{int}\ dimensions,\ \textcolor{keywordtype}{int}\ dimensionSize,\ \textcolor{keywordtype}{double}\ initialValues\ =\ 0.0);}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{int}\ get\_dimensions()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordtype}{int}\ get\_dimension\_size()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00029\ \ \ \ \ }
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordtype}{double}\ get(\textcolor{keyword}{const}\ std::vector<int>\&\ coords)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \ \ \ \ std::vector<double>\ get\_raw\_representation()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{double}\ set(\textcolor{keyword}{const}\ std::vector<int>\&\ coords,\ \textcolor{keywordtype}{double}\ value);}
+\DoxyCodeLine{00035\ \ \ \ \ }
+\DoxyCodeLine{00036\ \};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ STATESPACE\_H}}
+
+\end{DoxyCode}

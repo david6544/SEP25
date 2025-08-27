@@ -1,0 +1,90 @@
+\chapter{SEP25 }
+\hypertarget{index}{}\label{index}\index{SEP25@{SEP25}}
+\label{index_md__2_users_2omarbadr_2_documents_2_year_014_2_sem_012_2_s_e_p_2_s_e_p25_2_s_e_p25_2_r_e_a_d_m_e}%
+\Hypertarget{index_md__2_users_2omarbadr_2_documents_2_year_014_2_sem_012_2_s_e_p_2_s_e_p25_2_s_e_p25_2_r_e_a_d_m_e}%
+
+
+COMP SCI -\/ 3006 -\/ Software Engineering Project\hypertarget{index_autotoc_md1}{}\doxysection{\texorpdfstring{Building the Project}{Building the Project}}\label{index_autotoc_md1}
+This project uses CMake as its build system. The project structure includes\+:
+\begin{DoxyItemize}
+\item {\ttfamily /src} -\/ Source code files
+\item {\ttfamily /test} -\/ Unit tests using Google Test
+\end{DoxyItemize}\hypertarget{index_autotoc_md2}{}\doxysubsection{\texorpdfstring{Prerequisites}{Prerequisites}}\label{index_autotoc_md2}
+
+\begin{DoxyItemize}
+\item C++20 compatible compiler
+\item CMake 3.\+16 or higher
+\item Min\+GW ( see below instructions)
+\end{DoxyItemize}\hypertarget{index_autotoc_md3}{}\doxysubsection{\texorpdfstring{Min\+GW Installation}{Min\+GW Installation}}\label{index_autotoc_md3}
+
+\begin{DoxyEnumerate}
+\item Install Min\+GW\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ apt\ update}
+\DoxyCodeLine{sudo\ apt\ install\ mingw-\/w64}
+
+\end{DoxyCode}
+
+\item Validate Installation\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{which\ x86\_64-\/w64-\/mingw32-\/gcc\ }
+\DoxyCodeLine{which\ x86\_64-\/w64-\/mingw32-\/g++}
+
+\end{DoxyCode}
+
+\end{DoxyEnumerate}\hypertarget{index_autotoc_md4}{}\doxysubsection{\texorpdfstring{Local Build Instructions}{Local Build Instructions}}\label{index_autotoc_md4}
+
+\begin{DoxyEnumerate}
+\item Create the build directory and navigate to it\+: {\ttfamily mkdir -\/p build \&\& cd build}
+\item Generate the build files\+: {\ttfamily cmake ..}
+\item Build the project\+: {\ttfamily cmake -\/-\/build .}
+\end{DoxyEnumerate}\hypertarget{index_autotoc_md5}{}\doxysubsection{\texorpdfstring{Windows Cross-\/\+Compilation Instructions}{Windows Cross-\/\+Compilation Instructions}}\label{index_autotoc_md5}
+
+\begin{DoxyEnumerate}
+\item From the project root directory use the following to build the project and compile the executable 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{rm\ -\/rf\ build-\/windows\ \&\&\ cmake\ -\/B\ build-\/windows\ -\/S\ .\ -\/DCMAKE\_TOOLCHAIN\_FILE=windows-\/toolchain.cmake\ -\/DCMAKE\_BUILD\_TYPE=Release\ \&\&\ \ cmake\ -\/-\/build\ build-\/windows}
+
+\end{DoxyCode}
+
+\item .exe is located in {\ttfamily ./build-\/windows/sep25\+\_\+main\+\_\+\#\#\#\#\#\#\#.exe} this cannot be run locally on a linux machine can be copied to a windows machine for testing.
+\end{DoxyEnumerate}\hypertarget{index_autotoc_md6}{}\doxysubsection{\texorpdfstring{Running the Application}{Running the Application}}\label{index_autotoc_md6}
+After building, you can run the main executable\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./build/sep25\_main}
+
+\end{DoxyCode}
+\hypertarget{index_autotoc_md7}{}\doxysubsection{\texorpdfstring{Running Tests}{Running Tests}}\label{index_autotoc_md7}
+To run the unit tests\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./build/sep25\_tests}
+
+\end{DoxyCode}
+
+
+Or use CTest for more detailed output\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ build}
+\DoxyCodeLine{ctest}
+
+\end{DoxyCode}
+\hypertarget{index_autotoc_md8}{}\doxysubsection{\texorpdfstring{Development Workflow}{Development Workflow}}\label{index_autotoc_md8}
+For development, you can use the following commands\+:
+
+
+\begin{DoxyEnumerate}
+\item Clean build\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{rm\ -\/rf\ build}
+\DoxyCodeLine{cmake\ -\/S\ .\ -\/B\ build}
+\DoxyCodeLine{cmake\ -\/-\/build\ build}
+
+\end{DoxyCode}
+
+\item Run tests after building\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ \&\&\ ./build/sep25\_tests}
+
+\end{DoxyCode}
+ 
+\end{DoxyEnumerate}
