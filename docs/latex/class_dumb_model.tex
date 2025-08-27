@@ -1,0 +1,74 @@
+\doxysection{Dumb\+Model Class Reference}
+\hypertarget{class_dumb_model}{}\label{class_dumb_model}\index{DumbModel@{DumbModel}}
+
+
+The \doxylink{class_dumb_model}{Dumb\+Model} is merely for testing the client -\/ It randomly picks query points and sets statespace\mbox{[}query point\mbox{]} = returned value.  
+
+
+
+
+{\ttfamily \#include $<$Dumb\+Model.\+hpp$>$}
+
+Inheritance diagram for Dumb\+Model\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_dumb_model}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_dumb_model_aa8f7949063b5b6f0e9ee739330a0aac5}\label{class_dumb_model_aa8f7949063b5b6f0e9ee739330a0aac5} 
+{\bfseries Dumb\+Model} (int dimensions, int dimension\+Size)
+\item 
+std\+::vector$<$ int $>$ \mbox{\hyperlink{class_dumb_model_af311450c68cf5578a3c0a08d519c6401}{get\+\_\+next\+\_\+query}} () override
+\item 
+void \mbox{\hyperlink{class_dumb_model_a596e7c4b8cb7c9fed947f2206b5d21f3}{update\+\_\+prediction}} (const std\+::vector$<$ int $>$ \&query, double result) override
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_model}{Model}}}
+\begin{DoxyCompactItemize}
+\item 
+{\bfseries Model} (int dimensions, int dimension\+Size)
+\item 
+\mbox{\hyperlink{class_state_space}{State\+Space}} {\bfseries get\+\_\+state\+\_\+space} () const
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Protected Attributes inherited from \mbox{\hyperlink{class_model}{Model}}}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{class_state_space}{State\+Space}} \texorpdfstring{$\ast$}{*} {\bfseries state\+Space} = nullptr
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+The \doxylink{class_dumb_model}{Dumb\+Model} is merely for testing the client -\/ It randomly picks query points and sets statespace\mbox{[}query point\mbox{]} = returned value. 
+
+\label{doc-func-members}
+\Hypertarget{class_dumb_model_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_dumb_model_af311450c68cf5578a3c0a08d519c6401}\index{DumbModel@{DumbModel}!get\_next\_query@{get\_next\_query}}
+\index{get\_next\_query@{get\_next\_query}!DumbModel@{DumbModel}}
+\doxysubsubsection{\texorpdfstring{get\_next\_query()}{get\_next\_query()}}
+{\footnotesize\ttfamily \label{class_dumb_model_af311450c68cf5578a3c0a08d519c6401} 
+std\+::vector$<$ int $>$ Dumb\+Model\+::get\+\_\+next\+\_\+query (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{class_model}{Model}}.
+
+\Hypertarget{class_dumb_model_a596e7c4b8cb7c9fed947f2206b5d21f3}\index{DumbModel@{DumbModel}!update\_prediction@{update\_prediction}}
+\index{update\_prediction@{update\_prediction}!DumbModel@{DumbModel}}
+\doxysubsubsection{\texorpdfstring{update\_prediction()}{update\_prediction()}}
+{\footnotesize\ttfamily \label{class_dumb_model_a596e7c4b8cb7c9fed947f2206b5d21f3} 
+void Dumb\+Model\+::update\+\_\+prediction (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ int $>$ \&}]{query}{, }\item[{double}]{result}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{class_model}{Model}}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+/\+Users/omarbadr/\+Documents/\+Year 4/\+Sem 2/\+SEP/\+SEP25/\+SEP25/src/\+Models/Dumb\+Model.\+hpp\item 
+/\+Users/omarbadr/\+Documents/\+Year 4/\+Sem 2/\+SEP/\+SEP25/\+SEP25/src/\+Models/Dumb\+Model.\+cpp\end{DoxyCompactItemize}

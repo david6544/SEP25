@@ -1,0 +1,23 @@
+\doxysection{Input\+Output.\+hpp}
+\hypertarget{_input_output_8hpp_source}{}\label{_input_output_8hpp_source}\index{/Users/omarbadr/Documents/Year 4/Sem 2/SEP/SEP25/SEP25/src/InputOutput/InputOutput.hpp@{/Users/omarbadr/Documents/Year 4/Sem 2/SEP/SEP25/SEP25/src/InputOutput/InputOutput.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ INPUT\_OUTPUT\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ INPUT\_OUTPUT\_H}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}../StateSpace/StateSpace.hpp"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{keyword}{class\ }InputOutput\ \{}
+\DoxyCodeLine{00007\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00008\ \ \ \ \ \textcolor{keyword}{static}\ InputOutput*\ instance;}
+\DoxyCodeLine{00009\ \ \ \ \ InputOutput();}
+\DoxyCodeLine{00010\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{double}\ send\_query\_recieve\_result(\textcolor{keyword}{const}\ std::vector<int>\ \&query)\ =\ 0;}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ output\_state(\textcolor{keyword}{const}\ \mbox{\hyperlink{class_state_space}{StateSpace}}\ \&stateSpace)\ =\ 0;}
+\DoxyCodeLine{00013\ \ \ \ \ }
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keyword}{static}\ InputOutput*\ get\_instance();}
+\DoxyCodeLine{00015\ \};}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ INPUT\_OUTPUT\_H}}
+
+\end{DoxyCode}
