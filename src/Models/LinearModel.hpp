@@ -1,4 +1,13 @@
-
+/**
+ * @file LinearModel.hpp
+ * @author your name (you@domain.com) PLS UPDATE
+ * @brief This file declares a LinearModel class that performs linear interpolation on a 1D state space.
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef LINEAR_MODEL_H
 #define LINEAR_MODEL_H
 

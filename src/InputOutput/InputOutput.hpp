@@ -1,3 +1,13 @@
+/**
+ * @file InputOutput.hpp
+ * @author your name (you@domain.com) PLZ UPDATE
+ * @brief This file declares an abstract InputOutput class that serves as a base for different input/output strategies.
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef INPUT_OUTPUT_H
 #define INPUT_OUTPUT_H
 #include <vector>

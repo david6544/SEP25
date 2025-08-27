@@ -1,10 +1,14 @@
-/* 
+/**
+ * @file StateSpace.hpp
+ * @author your name (you@domain.com) PLS UPDATE
+ * @brief Implements a StateSpace class that allows for interactions with an n-dimensional integer indexed array.
 
-StateSpace.hpp
-Implements a StateSpace class that allows for interactions with an n-dimensional integer indexed array.
-
-*/
-
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 
 #ifndef STATESPACE_H
 #define STATESPACE_H

@@ -1,5 +1,14 @@
+/**
+ * @file CommandLineInputOutput.cpp
+ * @author your name (you@domain.com) PLS UPDATE
+ * @brief This file implements a CommandLineInputOutput class that handles input and output via the command line.
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #include <iostream>
-
 #include "CommandLineInputOutput.hpp"
 
 void CommandLineInputOutput::set_IO(){

@@ -1,3 +1,13 @@
+/**
+ * @file StateSpace.cpp
+ * @author your name (you@domain.com) PLS UPDATE
+ * @brief This file implements a StateSpace class that allows for interactions with an n-dimensional integer indexed array.
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #include "StateSpace.hpp"
 
 #include <string>
