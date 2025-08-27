@@ -1,4 +1,13 @@
-#if defined(LINEAR) || defined(TESTING)
+#if defined(LINEAR) || defined(TESTING)/**
+ * @file LinearModel.cpp
+ * @author Mitchell Parrington
+ * @brief This file implements a linear interpolation model
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #include <vector>
 #include <random>
 #include <ctime>

@@ -4,6 +4,7 @@ _deps/
 /build-windows/
 CMakeCache.txt
 CMakeFiles/
+/docs/
 
 # Compiled files
 *.o

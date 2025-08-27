@@ -1,10 +1,12 @@
 var NAVTREEINDEX0 =
 {
 "_command_line_input_output_8hpp_source.html":[2,0,0,0,0],
-"_dumb_model_8hpp_source.html":[2,0,0,1,0],
+"_dumb_model_8cpp.html":[2,0,0,1,0],
+"_dumb_model_8hpp_source.html":[2,0,0,1,1],
 "_input_output_8hpp_source.html":[2,0,0,0,1],
-"_linear_model_8hpp_source.html":[2,0,0,1,1],
-"_model_8hpp_source.html":[2,0,0,1,2],
+"_linear_model_8cpp.html":[2,0,0,1,2],
+"_linear_model_8hpp_source.html":[2,0,0,1,3],
+"_model_8hpp_source.html":[2,0,0,1,4],
 "_state_space_8hpp_source.html":[2,0,0,2,0],
 "annotated.html":[1,0],
 "class_command_line_input_output.html":[1,0,0],
