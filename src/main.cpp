@@ -8,6 +8,9 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(KNN)
+    #include "Models/KnnModel.hpp"
+    #define CurrentModel KnnModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
