@@ -1,22 +1,24 @@
-
+#if defined(LINEAR) || defined(TESTING)
 #include <vector>
 #include <random>
 #include <ctime>
 
 #include "LinearModel.hpp"
 
-LinearModel::LinearModel(int dimensions, int dimensionSize, int queries) : Model(dimensions, dimensionSize), m_maxQueryCount(queries) {
+LinearModel::LinearModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries){
     std::srand(std::time(nullptr));
 }
 
 std::vector<int> LinearModel::get_next_query() {
+    currentQuery++;
+
     static int traversed_ix = 0;
 
     int D = this->stateSpace->get_dimensions();
     int K = this->stateSpace->get_dimension_size();
     std::vector<int> nextQuery(D, 0);
 
-    double step = ((double)(K-1))/(double)m_maxQueryCount;
+    double step = ((double)(K-1))/(double)totalQueries;
     for (auto &var : nextQuery){
         double vard = step/2.0 + ((double)traversed_ix) * step;
         var = (int)std::round(vard);
@@ -138,5 +140,9 @@ void LinearModel::update_prediction_final() {
 
 void LinearModel::update_prediction(const std::vector<int> &query, double result) {
     stateSpace->set(query, result);
+    if (currentQuery == totalQueries)
+        update_prediction_final();
 }
+
+#endif // LINEAR || TESTING
 

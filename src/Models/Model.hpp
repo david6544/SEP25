@@ -8,6 +8,7 @@ class Model {
 protected:
     ArrayStateSpace* stateSpace = nullptr;
 public:
+
         Model(int dimensions, int dimensionSize): stateSpace(new ArrayStateSpace(dimensions, dimensionSize)) {};
         virtual std::vector<int> get_next_query() = 0;
         virtual void update_prediction(const std::vector<int> &query, double result) = 0;
