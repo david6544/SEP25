@@ -1,7 +1,6 @@
 #if defined(KNN) || defined(TESTING)
 #include <vector>
 #include <algorithm>
-#include <iostream>
 
 #include "KnnModel.hpp"
 
@@ -12,14 +11,23 @@ KnnModel::KnnModel(int dimensions, int dimensionSize, int queries) : Model(dimen
 }
 
 void KnnModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves) {
-    if (node->is_leaf()){
-        if (get_exploration_score(node) > 0.1)
+    if (!node) return;
+
+    if (node->is_leaf()) {
+        long long totalCoords = 1;
+        for (int i = 0; i < dimensions; i++)
+            totalCoords *= (node->max_bound[i] - node->min_bound[i] + 1);
+
+        if ((int)node->points.size() < totalCoords) { // still space to explore
             leaves.push_back(node);
+        }
         return;
     }
+
     get_explore_leaves(node->left, leaves);
     get_explore_leaves(node->right, leaves);
 }
+
 
 std::vector<int> KnnModel::get_next_query() {
     if (root == nullptr) {
@@ -88,27 +96,23 @@ double KnnModel::get_exploration_score(TreeNode* leaf) {
         maxPotentialVariance += pow(leaf->max_bound[i] - leaf->min_bound[i], 2)/4;
     
     maxPotentialVariance /= dimensions;
-    
+    if (maxPotentialVariance == 0) return 0;
     return (maxPotentialVariance - get_variance(leaf->points))/maxPotentialVariance;
 }
 
 void KnnModel::update_prediction(const std::vector<int> &query, double result){
     currentQuery++;
 
-    Point newPoint;
-    newPoint.coords = query;
-    newPoint.value = result;
-
     if (root == nullptr) {
-        root = new TreeNode();
-        root->points.push_back(newPoint);
-        root->min_bound = std::vector<int>(dimensions, 0);
-        root->max_bound = std::vector<int>(dimensions, dimensionSize-1);
+        std::vector<Point> data = { Point(query, result) };
+        std::vector<int> min_bound(dimensions, 0);
+        std::vector<int> max_bound(dimensions, dimensionSize - 1);
+        root = build_tree(data, min_bound, max_bound);
         return;
     }
 
     // Insert point into tree
-    insert_point(root, newPoint);
+    insert_point(root, query, result);
 
     if (currentQuery == totalQueries){
         std::vector<int> initialQuery(dimensions, 0);
@@ -173,12 +177,22 @@ TreeNode* KnnModel::build_tree(std::vector<Point>& data,
     // Left child bounds
     std::vector<int> left_max = max_bound;
     left_max[best_dim] = node->split_value;
-    node->left = build_tree(left_pts, min_bound, left_max);
 
     // Right child bounds
     std::vector<int> right_min = min_bound;
     right_min[best_dim] = node->split_value + 1;
+
+    // After partitioning points into left_pts and right_pts:
+    if (left_pts.empty() || right_pts.empty()) {
+        node->points = data;        // keep as a leaf; this split is not useful
+        node->left = node->right = nullptr;
+        return node;
+    }
+
+    // Else proceed to build children
+    node->left  = build_tree(left_pts,  min_bound, left_max);
     node->right = build_tree(right_pts, right_min, max_bound);
+
 
     return node;
 }
@@ -215,46 +229,49 @@ double KnnModel::get_variance(std::vector<Point>& data){
 }
 
 // Insert point and split if necessary
-void KnnModel::insert_point(TreeNode* node, const Point& p) {
-    if (node->is_leaf()) {
-        node->points.push_back(p);
-
-        if (node->points.size() > min_leaf_size && get_variance(node->points) > variance_threshold) {
-            std::vector<Point> pts = node->points;
-            node->points.clear();
-            TreeNode* new_node = build_tree(pts, node->min_bound, node->max_bound);
-
-            // copy split info
-            node->split_dimension = new_node->split_dimension;
-            node->split_value = new_node->split_value;
-            node->left = new_node->left;
-            node->right = new_node->right;
-            delete new_node;
-        }
+void KnnModel::insert_point(TreeNode* node, const std::vector<int>& query, double result) {
+    if (!node) {
+        std::cerr << "insert_point got nullptr node!\n";
         return;
     }
 
-    if (p.coords[node->split_dimension] <= node->split_value)
-        insert_point(node->left, p);
-    else
-        insert_point(node->right, p);
+    if (node->is_leaf()) {
+        node->points.push_back(Point(query, result));
+        if ((int)node->points.size() > min_leaf_size) {
+            std::vector<Point> pts = node->points;
+            node->points.clear();
+
+            TreeNode* new_node = build_tree(pts, node->min_bound, node->max_bound);
+            if (new_node) {
+                node->split_dimension = new_node->split_dimension;
+                node->split_value = new_node->split_value;
+                node->left = new_node->left;
+                node->right = new_node->right;
+                new_node->left = new_node->right = nullptr;
+                delete new_node;
+            }
+        }
+    } else {
+        if (query[node->split_dimension] <= node->split_value){
+            insert_point(node->left, query, result);
+        }else{
+            insert_point(node->right, query, result);
+        }
+    }
 }
 
-double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
-    int K = 5; // you can make this configurable
 
-    // 1. Find leaf containing the query
+double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
+    int K = 5;
+
     TreeNode* leaf = find_leaf(root, coordinate);
 
-    // 2. Collect candidate points (start with leaf)
     std::vector<Point> candidates = leaf->points;
 
     if (candidates.empty()) {
-        // no data -> return neutral prediction
         return 0.0;
     }
 
-    // 3. Compute distances to all candidates
     struct Neighbor {
         double dist;
         double value;
@@ -277,9 +294,7 @@ double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
         neighbors.push_back({dist, p.value});
     }
 
-    // 4. Sort by distance
-    std::sort(neighbors.begin(), neighbors.end(),
-              [](const Neighbor& a, const Neighbor& b) { return a.dist < b.dist; });
+    std::sort(neighbors.begin(), neighbors.end());
 
     // 5. Take K nearest (or fewer if not enough points)
     int useK = std::min(K, (int)neighbors.size());
@@ -289,7 +304,7 @@ double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
     double weightTotal = 0.0;
 
     for (int i = 0; i < useK; i++) {
-        double w = (neighbors[i].dist == 0.0) ? 1e9 : 1.0 / neighbors[i].dist; // handle exact match
+        double w = 1.0 / neighbors[i].dist;
         weightedSum += w * neighbors[i].value;
         weightTotal += w;
     }
@@ -298,11 +313,12 @@ double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
 }
 
 void KnnModel::updateStateSpace(std::vector<int>& coords, int idx){
-    stateSpace->set(coords, predict_coordinate(coords));
+    if (idx == dimensions) {
+        stateSpace->set(coords, predict_coordinate(coords));
+        return;
+    };
 
-    if (idx == dimensions) return;
-
-    for (int x = 1; x < dimensionSize; x++){
+    for (int x = 0; x < dimensionSize; x++){
         coords[idx] = x;
         updateStateSpace(coords, idx + 1);
     }

@@ -19,7 +19,7 @@ struct Point {
  */
 struct TreeNode {
     int split_dimension;
-    double split_value;
+    int split_value;
     TreeNode* left = nullptr;
     TreeNode* right = nullptr;
     
@@ -52,7 +52,7 @@ private:
     
     TreeNode* find_leaf(TreeNode* node, const std::vector<int>& query);
 
-    void insert_point(TreeNode* node, const Point& p);
+    void insert_point(TreeNode* node, const std::vector<int>& query, double result);
 
     TreeNode* build_tree(std::vector<Point>& data, const std::vector<int>& min_bound,const std::vector<int>& max_bound);
 

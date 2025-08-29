@@ -15,6 +15,9 @@
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
 
+#include <iostream>
+using namespace std;
+
 void algorithm(int dimensions, int dimensionSize, int totalQueries){
     InputOutput *io = InputOutput::get_instance();
 
