@@ -260,57 +260,95 @@ void KnnModel::insert_point(TreeNode* node, const std::vector<int>& query, doubl
     }
 }
 
+struct Neighbor {
+    double dist2;
+    double value;
+    bool operator<(const Neighbor& other) const { return dist2 < other.dist2; }
+};
+
+void collect_neighbors(TreeNode* node, 
+                       const std::vector<int>& coord, 
+                       int K, 
+                       std::vector<Neighbor>& heap) {
+    if (!node) return;
+
+    if (node->is_leaf()) {
+        for (auto& p : node->points) {
+            double dist2 = 0.0;
+            for (int d = 0; d < coord.size(); ++d) {
+                double diff = (double)p.coords[d] - coord[d];
+                dist2 += diff * diff;
+            }
+
+            // If exact match, we can return immediately (optional optimization)
+            if (dist2 == 0.0) {
+                heap.clear();
+                heap.push_back({0.0, p.value});
+                return;
+            }
+
+            if (heap.size() < K) {
+                heap.push_back({dist2, p.value});
+            } else if (dist2 < heap[0].dist2) {
+                // maintain max-heap: largest distance on top
+                std::pop_heap(heap.begin(), heap.end());
+                heap.back() = {dist2, p.value};
+                std::push_heap(heap.begin(), heap.end());
+            }
+        }
+        return;
+    }
+
+    // Decide which side to explore first
+    int dim = node->split_dimension;
+    double val = coord[dim];
+
+    TreeNode* first = (val <= node->split_value) ? node->left : node->right;
+    TreeNode* second = (val <= node->split_value) ? node->right : node->left;
+
+    // Explore closer side first
+    collect_neighbors(first, coord, K, heap);
+
+    // Decide whether to explore other side
+    double diff = val - node->split_value;
+    double diff2 = diff * diff;
+
+    // Only explore if closer side didn't already give enough close points
+    if (heap.size() < K || diff2 < heap[0].dist2) {
+        collect_neighbors(second, coord, K, heap);
+    }
+}
+
 
 double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
     int K = 5;
-
-    TreeNode* leaf = find_leaf(root, coordinate);
-
-    std::vector<Point> candidates = leaf->points;
-
-    if (candidates.empty()) {
-        return 0.0;
-    }
-
-    struct Neighbor {
-        double dist;
-        double value;
-        bool operator<(const Neighbor& other) const {
-            return dist < other.dist; // for sorting
-        }
-    };
+    if (!root) return 0.0;
 
     std::vector<Neighbor> neighbors;
-    for (auto& p : candidates) {
-        if (p.coords == coordinate)
-            return p.value;
-        double dist = 0.0;
-        for (int d = 0; d < dimensions; d++) {
-            double diff = (double)p.coords[d] - coordinate[d];
-            dist += diff * diff;
-        }
-        dist = std::sqrt(dist);
+    neighbors.reserve(K);
 
-        neighbors.push_back({dist, p.value});
+    collect_neighbors(root, coordinate, K, neighbors);
+
+    // If exact match found
+    if (neighbors.size() == 1 && neighbors[0].dist2 == 0.0) {
+        return neighbors[0].value;
     }
 
-    std::sort(neighbors.begin(), neighbors.end());
+    // Build max-heap for weighted average
+    std::make_heap(neighbors.begin(), neighbors.end());
 
-    // 5. Take K nearest (or fewer if not enough points)
-    int useK = std::min(K, (int)neighbors.size());
+    double weightedSum = 0.0, weightTotal = 0.0;
+    double epsilon = 1e-6;
 
-    // 6. Weighted average prediction
-    double weightedSum = 0.0;
-    double weightTotal = 0.0;
-
-    for (int i = 0; i < useK; i++) {
-        double w = 1.0 / neighbors[i].dist;
-        weightedSum += w * neighbors[i].value;
+    for (auto& n : neighbors) {
+        double w = 1.0 / (std::sqrt(n.dist2) + epsilon); // inverse distance weighting
+        weightedSum += w * n.value;
         weightTotal += w;
     }
 
-    return weightedSum / weightTotal;
+    return (weightTotal > 0.0) ? (weightedSum / weightTotal) : 0.0;
 }
+
 
 void KnnModel::updateStateSpace(std::vector<int>& coords, int idx){
     if (idx == dimensions) {
