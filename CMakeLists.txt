@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
-cmake_minimum_required(VERSION 3.16)
-project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
+# Selected Algorithm (change text in " ")
+set(ALGORITHM "DUMB")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
@@ -70,6 +70,14 @@ list(FILTER SRC_FILES EXCLUDE REGEX ".*/main.cpp$")
 
 # Main executable with commit hash
 add_executable(sep25_main src/main.cpp ${SRC_FILES})
+
+message(STATUS "Selected algorithm: ${ALGORITHM}")
+
+# Add compile definition based on chosen algorithm
+target_compile_definitions(sep25_main PUBLIC ${ALGORITHM})
+
+target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
+include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT_HASH_SHORT}")
 
 # Include dirs
@@ -88,6 +96,15 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
+target_compile_definitions(sep25_tests PUBLIC "TESTING")
+
+# Link GoogleTest
+target_link_libraries(sep25_tests 
+    gtest_main
+    gmock_main
+)
+
+# Add tests
 target_link_libraries(sep25_tests gtest_main gmock_main)
 add_test(NAME UnitTests COMMAND sep25_tests)
 

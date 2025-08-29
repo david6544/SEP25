@@ -26,6 +26,9 @@ which x86_64-w64-mingw32-gcc
 which x86_64-w64-mingw32-g++
 ```
 
+### Changing Models
+In order to change the model that the build is using update the `ALGORITHM` value in the `CMakeLists.txt` file to the Model definition and add the algorithm in main. Please see the DumbModel implementation as an example.
+
 
 ### Local Build Instructions
 

@@ -6,7 +6,7 @@
 using namespace std;
 
 TEST(TestModel, TestsModel1D){
-    DumbModel myModel(1, 10);
+    DumbModel myModel(1, 10, 10);
 
     // test functionality
     EXPECT_EQ(1, myModel.get_next_query().size());
@@ -22,7 +22,7 @@ TEST(TestModel, TestsModel1D){
 
 TEST(TestModel, TestsModelND){
     for (int i = 1; i < 6; i++){
-        DumbModel myModel(i, 10);
+        DumbModel myModel(i, 10, 10);
         
         vector<int> queryPoint(i, 0);
 

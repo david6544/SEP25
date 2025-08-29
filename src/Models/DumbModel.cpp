@@ -1,10 +1,11 @@
+#if defined(DUMB) || defined(TESTING)
 #include <vector>
 #include <random>
 #include <ctime>
 
 #include "DumbModel.hpp"
 
-DumbModel::DumbModel(int dimensions, int dimensionSize) : Model(dimensions, dimensionSize) {
+DumbModel::DumbModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {
     std::srand(std::time(nullptr));
 }
 
@@ -24,3 +25,4 @@ void DumbModel::update_prediction(const std::vector<int> &query, double result) 
     stateSpace->set(query, result);
 }
 
+#endif // DUMB || TESTING
