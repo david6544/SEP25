@@ -47,7 +47,7 @@ std::vector<int> KnnModel::get_next_query() {
     for (auto leaf : leaves) {
         for (int i = 0; i < candidates_per_leaf; ++i) {
             auto candidate = get_random_candidate(leaf);
-            double score = get_exploitation_score(leaf) + 1.0 * get_exploration_score(leaf); // lambda=1
+            double score = get_exploitation_score(leaf);
             if (best_score < score){
                 best_score = score;
                 best_candidate = candidate;
