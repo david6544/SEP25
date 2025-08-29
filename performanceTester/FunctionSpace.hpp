@@ -9,7 +9,7 @@
 
 #define SpaceFunctionType std::function<double(const std::vector<int>&)>
 
-typedef struct {
+typedef struct Results {
     int correct = 0;
     int totalSeen = 0;
 
@@ -62,6 +62,8 @@ class FunctionSpace : public StateSpace {
 private:
     SpaceFunctionType spaceFunction;
     Results results;
+
+    std::vector<Results> allResults;
     
     void getResultsHelper(const StateSpace& comparisonStateSpace, std::vector<int>& query, int dimension);
 public:
@@ -74,6 +76,7 @@ public:
     double get(const std::vector<int>& coords) const override;
 
     Results getResults(const StateSpace& comparisonStateSpace);
+    std::vector<Results> getAllResults(){ return allResults; };
 };
 
 

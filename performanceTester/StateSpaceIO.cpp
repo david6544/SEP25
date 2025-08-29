@@ -1,5 +1,6 @@
 #include "StateSpaceIO.hpp"
 #include <iostream>
+using std::cout, std::endl;
 
 FunctionSpace* StateSpaceIO::stateSpace = nullptr;
 
@@ -21,7 +22,6 @@ double StateSpaceIO::send_query_recieve_result(const std::vector<int> &query) {
 void StateSpaceIO::output_state(StateSpace &predictedStateSpace) {
     Results results = stateSpace->getResults(predictedStateSpace);
 
-    using namespace std;
     cout << "Performance Metrics:" << endl;
     cout << "-------------------" << endl;
     cout << "Percent Correct: " << results.percentCorrect() << "%" << endl;

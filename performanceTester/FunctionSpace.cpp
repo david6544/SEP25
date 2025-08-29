@@ -67,5 +67,7 @@ Results FunctionSpace::getResults(const StateSpace& comparisonStateSpace) {
 
     getResultsHelper(comparisonStateSpace, initialQuery, 0);
 
+    this->allResults.push_back(this->results);
+    
     return this->results;
 }

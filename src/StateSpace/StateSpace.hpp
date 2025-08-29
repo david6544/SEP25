@@ -1,7 +1,7 @@
 /* 
 
-ArrayArrayStateSpace.hpp
-Implements a ArrayStateSpace class that allows for interactions with an n-dimensional integer indexed array.
+StateSpace.hpp
+Implements a StateSpace class that allows for interactions with an n-dimensional integer indexed array.
 
 */
 

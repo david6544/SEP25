@@ -8,6 +8,7 @@ class StateSpaceIO : public InputOutput {
 private:
     static FunctionSpace *stateSpace;
     StateSpaceIO() = default;
+
 public:
     static void set_state_space(FunctionSpace& stateSpace);
     static void set_IO(FunctionSpace& stateSpace);

@@ -4,7 +4,6 @@
 #include "../src/InputOutput/InputOutput.hpp"
 #include "../src/InputOutput/CommandLineInputOutput.hpp"
 
-using namespace std;
 
 TEST(TestCommandLine, testCLIOinnit){
     // use clio input output

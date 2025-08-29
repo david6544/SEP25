@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
-set(ALGORITHM "DUMB")
+set(ALGORITHM "LINEAR")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
@@ -84,8 +84,7 @@ set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT
 file(GLOB PERFORMANCE_FILES performanceTester/*.cpp)
 add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
 target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
-
-
+target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM})
 
 # GoogleTest setup (unchanged)
 include(FetchContent)

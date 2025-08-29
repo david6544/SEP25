@@ -3,8 +3,6 @@
 
 #include "../src/StateSpace/ArrayStateSpace.hpp"
 
-using namespace std;
-
 TEST(TestStateSpace, TestsGetAndSetIn1D){
     ArrayStateSpace mySpace(1, 5);
     ASSERT_EQ(0.0, mySpace.get({1}));
@@ -18,7 +16,7 @@ TEST(TestStateSpace, TestsGetAndSetInND){
         EXPECT_EQ(i, mySpace.get_dimensions());
         EXPECT_EQ(10, mySpace.get_dimension_size());
 
-        vector<int> point(i, i);
+        std::vector<int> point(i, i);
     
         EXPECT_EQ(0.0, mySpace.get(point));
         EXPECT_NO_THROW(mySpace.set(point, 23));
