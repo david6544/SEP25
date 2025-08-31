@@ -59,7 +59,6 @@ std::vector<int> KnnModel::get_next_query() {
 }
 
 std::vector<int> KnnModel::get_random_candidate(TreeNode* leaf) {
-    // generate candidate
     std::vector<int> candidate(dimensions);
     for (int d = 0; d < dimensions; ++d) {
         std::vector<int> dVals;
@@ -78,7 +77,7 @@ std::vector<int> KnnModel::get_random_candidate(TreeNode* leaf) {
                 run[2] = dVals[i];
             }
         }
-        candidate[d] = run[1] + 1 + rand() % (run[2] - run[1] - 1);
+        candidate[d] = (run[1] + run[2])/2;
     }
     return candidate;
 }
@@ -279,34 +278,40 @@ struct Neighbor {
     bool operator<(const Neighbor& other) const { return dist2 < other.dist2; }
 };
 
-void collect_neighbors(TreeNode* node, 
-                       const std::vector<int>& coord, 
-                       int K, 
-                       std::vector<Neighbor>& heap) {
-    if (!node) return;
+void collect_neighbors(TreeNode* node,
+                       const std::vector<int>& coord,
+                       int K,
+                       std::vector<Neighbor>& heap,
+                       bool &found_exact) {
+    if (!node || found_exact) return;
 
     if (node->is_leaf()) {
         for (auto& p : node->points) {
             double dist2 = 0.0;
-            for (int d = 0; d < coord.size(); ++d) {
+            for (int d = 0; d < (int)coord.size(); ++d) {
                 double diff = (double)p.coords[d] - coord[d];
                 dist2 += diff * diff;
             }
 
-            // If exact match, we can return immediately (optional optimization)
             if (dist2 == 0.0) {
+                // exact match -> store it and signal to stop everything
                 heap.clear();
                 heap.push_back({0.0, p.value});
+                // no need to heapify for single element
+                found_exact = true;
                 return;
             }
 
-            if (heap.size() < K) {
+            if ((int)heap.size() < K) {
                 heap.push_back({dist2, p.value});
-            } else if (dist2 < heap[0].dist2) {
-                // maintain max-heap: largest distance on top
-                std::pop_heap(heap.begin(), heap.end());
-                heap.back() = {dist2, p.value};
-                std::push_heap(heap.begin(), heap.end());
+                std::push_heap(heap.begin(), heap.end()); // maintain max-heap
+            } else {
+                // ensure heap[0] is the largest dist2 (max-heap)
+                if (dist2 < heap.front().dist2) {
+                    std::pop_heap(heap.begin(), heap.end()); // moves largest to back
+                    heap.back() = {dist2, p.value};
+                    std::push_heap(heap.begin(), heap.end());
+                }
             }
         }
         return;
@@ -320,15 +325,16 @@ void collect_neighbors(TreeNode* node,
     TreeNode* second = (val <= node->split_value) ? node->right : node->left;
 
     // Explore closer side first
-    collect_neighbors(first, coord, K, heap);
+    collect_neighbors(first, coord, K, heap, found_exact);
+    if (found_exact) return;
 
     // Decide whether to explore other side
     double diff = val - node->split_value;
     double diff2 = diff * diff;
 
     // Only explore if closer side didn't already give enough close points
-    if (heap.size() < K || diff2 < heap[0].dist2) {
-        collect_neighbors(second, coord, K, heap);
+    if ((int)heap.size() < K || diff2 < heap.front().dist2) {
+        collect_neighbors(second, coord, K, heap, found_exact);
     }
 }
 
@@ -340,19 +346,26 @@ double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
     std::vector<Neighbor> neighbors;
     neighbors.reserve(K);
 
-    collect_neighbors(root, coordinate, K, neighbors);
+    bool found_exact = false;
+    collect_neighbors(root, coordinate, K, neighbors, found_exact);
 
     // If exact match found
-    if (neighbors.size() == 1 && neighbors[0].dist2 == 0.0) {
+    if (found_exact && neighbors.size() == 1 && neighbors[0].dist2 == 0.0) {
         return neighbors[0].value;
     }
 
-    // Build max-heap for weighted average
+    if (neighbors.empty()) {
+        // no neighbors found -> fallback (choose sensible default)
+        return 0.0;
+    }
+
+    // Make sure neighbors is a heap (it should already be) and then use them
     std::make_heap(neighbors.begin(), neighbors.end());
 
     double weightedSum = 0.0, weightTotal = 0.0;
     double epsilon = 1e-6;
 
+    // Note: neighbors is a max-heap, but we can iterate normally
     for (auto& n : neighbors) {
         double w = 1.0 / (std::sqrt(n.dist2) + epsilon); // inverse distance weighting
         weightedSum += w * n.value;
@@ -361,6 +374,7 @@ double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
 
     return (weightTotal > 0.0) ? (weightedSum / weightTotal) : 0.0;
 }
+
 
 
 void KnnModel::updateStateSpace(std::vector<int>& coords, int idx){
