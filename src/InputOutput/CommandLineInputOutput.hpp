@@ -8,7 +8,7 @@ class CommandLineInputOutput : public InputOutput {
     CommandLineInputOutput() = default;
 public:
     double send_query_recieve_result(const std::vector<int> &query) override;
-    void output_state(const StateSpace &stateSpace) override;
+    void output_state(StateSpace &stateSpace) override;
     static void set_IO();
 };
 

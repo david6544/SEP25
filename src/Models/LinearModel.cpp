@@ -30,7 +30,7 @@ std::vector<int> LinearModel::get_next_query() {
     return nextQuery;
 }
 
-void print_statespace(StateSpace& stateSpace) {
+void print_statespace(ArrayStateSpace& stateSpace) {
     std::vector<double> vec2Output = stateSpace.get_raw_representation();
     if (vec2Output.size() == 0) return;
     for (int i = 0; i < vec2Output.size(); i++)

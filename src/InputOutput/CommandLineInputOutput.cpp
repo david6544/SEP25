@@ -19,10 +19,12 @@ double CommandLineInputOutput::send_query_recieve_result(const std::vector<int> 
     return result;
 }
 
-void CommandLineInputOutput::output_state(const StateSpace &stateSpace){
-    std::vector<double> vec2Output = stateSpace.get_raw_representation();
-    if (vec2Output.size() == 0) return;
-    for (int i = 0; i < vec2Output.size(); i++)
-        std::cout << vec2Output[i] << ((i == vec2Output.size()-1) ? "\n" : " ");
-
+void CommandLineInputOutput::output_state(StateSpace &stateSpace){
+    if (dynamic_cast<ArrayStateSpace*>(&stateSpace)){
+        auto arraySS = dynamic_cast<ArrayStateSpace*>(&stateSpace);
+        std::vector<double> vec2Output = arraySS->get_raw_representation();
+        if (vec2Output.size() == 0) return;
+        for (int i = 0; i < vec2Output.size(); i++)
+            std::cout << vec2Output[i] << ((i == vec2Output.size()-1) ? "\n" : " ");
+    }
 }
