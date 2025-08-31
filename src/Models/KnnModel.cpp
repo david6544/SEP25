@@ -47,7 +47,7 @@ std::vector<int> KnnModel::get_next_query() {
     for (auto leaf : leaves) {
         for (int i = 0; i < candidates_per_leaf; ++i) {
             auto candidate = get_random_candidate(leaf);
-            double score = get_exploitation_score(leaf);
+            double score = get_exploitation_score(leaf) + 1.4 * get_exploration_score(leaf);
             if (best_score < score){
                 best_score = score;
                 best_candidate = candidate;
@@ -59,17 +59,28 @@ std::vector<int> KnnModel::get_next_query() {
 }
 
 std::vector<int> KnnModel::get_random_candidate(TreeNode* leaf) {
-    // trust that we will get a valid candidate
-    while (true){
-        // generate candidate
-        std::vector<int> candidate(dimensions);
-        for (int i = 0; i < dimensions; i++)
-            candidate[i] = leaf->min_bound[i] + rand() % (leaf->max_bound[i] - leaf->min_bound[i] + 1);
-        
-        // check that candidate is not already present
-        if (leaf->points.end() == std::find_if(leaf->points.begin(), leaf->points.end(), [candidate](const Point& p) { return (p.coords == candidate);}))
-            return candidate;
+    // generate candidate
+    std::vector<int> candidate(dimensions);
+    for (int d = 0; d < dimensions; ++d) {
+        std::vector<int> dVals;
+        dVals.reserve((leaf->points.size() + 2));
+        dVals.push_back(leaf->min_bound[d]-1);
+        for (auto& p : leaf->points) 
+            dVals.push_back(p.coords[d]);
+        dVals.push_back(leaf->max_bound[d]+1);
+        sort(dVals.begin(), dVals.end());
+        int run[3] = {0,0,0};
+        for (int i = 1; i < dVals.size(); i++){
+            int diff = dVals[i] - dVals[i-1];
+            if (diff > run[0]){
+                run[0] = diff;
+                run[1] = dVals[i-1];
+                run[2] = dVals[i];
+            }
+        }
+        candidate[d] = run[1] + 1 + rand() % (run[2] - run[1] - 1);
     }
+    return candidate;
 }
 
 
@@ -88,16 +99,21 @@ double KnnModel::get_exploitation_score(TreeNode* leaf) {
  * @return double the score of the exploration metric
  */
 double KnnModel::get_exploration_score(TreeNode* leaf) {
-    std::vector<double> average(dimensions, 0.0);
-    int N = leaf->points.size();
+    if (leaf->points.empty()) return 1.0; // completely unexplored
 
-    double maxPotentialVariance = 0;
-    for (int i = 0; i < dimensions; i++)
-        maxPotentialVariance += pow(leaf->max_bound[i] - leaf->min_bound[i], 2)/4;
-    
-    maxPotentialVariance /= dimensions;
-    if (maxPotentialVariance == 0) return 0;
-    return (maxPotentialVariance - get_variance(leaf->points))/maxPotentialVariance;
+    double avgPred = 0.0;
+    for (auto& p : leaf->points) avgPred += p.value;
+    avgPred /= leaf->points.size();
+
+    double predVar = 0.0;
+    for (auto& p : leaf->points) {
+        double diff = p.value - avgPred;
+        predVar += diff * diff;
+    }
+    predVar /= leaf->points.size();
+
+    // Normalize by some max variance
+    return predVar / (1.0 + predVar);
 }
 
 void KnnModel::update_prediction(const std::vector<int> &query, double result){
@@ -208,24 +224,21 @@ TreeNode* KnnModel::find_leaf(TreeNode* node, const std::vector<int>& query) {
 }
 
 double KnnModel::get_variance(std::vector<Point>& data){
-    std::vector<double> average(dimensions, 0.0);
-    int N = data.size();
+    if (data.empty()) return 1.0; // completely unexplored
 
-    for (auto& p : data){
-        for (int d = 0; d < dimensions; ++d)
-            average[d] += (p.coords[d]/N);
+    double avgPred = 0.0;
+    for (auto& p : data) avgPred += p.value;
+    avgPred /= data.size();
+
+    double predVar = 0.0;
+    for (auto& p : data) {
+        double diff = p.value - avgPred;
+        predVar += diff * diff;
     }
+    predVar /= data.size();
 
-    double avgVariance = 0;
-
-    for (auto& p : data){
-        for (int d = 0; d < dimensions; ++d) {
-            double diff = p.coords[d] - average[d];
-            avgVariance += diff * diff;
-        }
-    }
-
-    return avgVariance/(N*dimensions);
+    // Normalize by some max variance
+    return predVar / (1.0 + predVar);
 }
 
 // Insert point and split if necessary
