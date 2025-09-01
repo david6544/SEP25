@@ -57,9 +57,8 @@ void runSeveral(int dimensions, int dimensionSize, SpaceFunctionType func) {
             double result = io->send_query_recieve_result(query);
             model.update_prediction(query, result);
         }
-        auto raw_state = model.get_state_space();
-        results.emplace_back(fspace.getResults(raw_state));
-        io->output_state(raw_state);
+        results.emplace_back(fspace.getResults(model));
+        io->output_state(model);
     }
     output_performance(results);
 
@@ -78,8 +77,7 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
         double result = io->send_query_recieve_result(query);
         model.update_prediction(query, result);
     }
-    auto raw_state = model.get_state_space();
-    io->output_state(raw_state);
+    io->output_state(model);
 }
 
 

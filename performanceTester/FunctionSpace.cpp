@@ -31,7 +31,7 @@ double FunctionSpace::get(const std::vector<int>& coords) const {
 
 
 
-void FunctionSpace::getResultsHelper(const StateSpace& comparisonStateSpace, std::vector<int>& query, int dimension){
+void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int dimension){
     for (auto i : query)
         std::cout << i << " ";
     std::cout << std::endl;
@@ -44,28 +44,28 @@ void FunctionSpace::getResultsHelper(const StateSpace& comparisonStateSpace, std
         query[dimension] = i;
 
         double actualResult = this->get(query);
-        double predictedResult = comparisonStateSpace.get(query);
+        double predictedResult = model.get_value_at(query);
 
         this->results.updateResults(actualResult, predictedResult);
 
-        getResultsHelper(comparisonStateSpace, query, dimension+1);
+        getResultsHelper(model, query, dimension+1);
     }
     query[dimension] = 0;
     
     return;
 }
 
-Results FunctionSpace::getResults(const StateSpace& comparisonStateSpace) {
+Results FunctionSpace::getResults(Model& model) {
     results = Results();
 
     std::vector<int> initialQuery(dimensions, 0);
 
     double actualResult = this->get(initialQuery);
-    double predictedResult = comparisonStateSpace.get(initialQuery);
+    double predictedResult = model.get_value_at(initialQuery);
 
     this->results.updateResults(actualResult, predictedResult);
 
-    getResultsHelper(comparisonStateSpace, initialQuery, 0);
+    getResultsHelper(model, initialQuery, 0);
 
     this->allResults.push_back(this->results);
     

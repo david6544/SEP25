@@ -6,7 +6,7 @@
 #include "DumbModel.hpp"
 
 DumbModel::DumbModel(int dimensions, int dimensionSize, int totalQueries) : 
-    Model(dimensions, dimensionSize, totalQueries), stateSpace(new StateSpace(dimensions, dimensionSize)) {
+    Model(dimensions, dimensionSize, totalQueries), stateSpace(new ArrayStateSpace(dimensions, dimensionSize)) {
     std::srand(std::time(nullptr));
 }
 

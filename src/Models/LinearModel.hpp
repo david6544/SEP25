@@ -3,10 +3,10 @@
 #define LINEAR_MODEL_H
 
 #include "Model.hpp"
-#include "../StateSpace/StateSpace.hpp"
+#include "../StateSpace/ArrayStateSpace.hpp"
 
 class LinearModel : public Model {
-    StateSpace* stateSpace;
+    ArrayStateSpace* stateSpace;
 public:
     LinearModel(int dimensions, int dimensionSize, int totalQueries);
     std::vector<int> get_next_query() override;

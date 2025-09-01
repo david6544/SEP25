@@ -2,6 +2,7 @@
 #define FUNCTION_SPACE
 
 #include "../src/StateSpace/ArrayStateSpace.hpp"
+#include "../src/Models/Model.hpp"
 #include <vector>
 #include <functional>
 #include <algorithm>
@@ -65,7 +66,7 @@ private:
 
     std::vector<Results> allResults;
     
-    void getResultsHelper(const StateSpace& comparisonStateSpace, std::vector<int>& query, int dimension);
+    void getResultsHelper(Model& model, std::vector<int>& query, int dimension);
 public:
     FunctionSpace(int dimensions, int dimensionSize, SpaceFunctionType spaceFunction);
 
@@ -75,7 +76,7 @@ public:
     
     double get(const std::vector<int>& coords) const override;
 
-    Results getResults(const StateSpace& comparisonStateSpace);
+    Results getResults(Model& model);
     std::vector<Results> getAllResults(){ return allResults; };
 };
 

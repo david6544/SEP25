@@ -6,7 +6,7 @@
 #include "LinearModel.hpp"
 
 LinearModel::LinearModel(int dimensions, int dimensionSize, int totalQueries) : 
-    Model(dimensions, dimensionSize, totalQueries), stateSpace(new StateSpace(dimensions, dimensionSize)) {
+    Model(dimensions, dimensionSize, totalQueries), stateSpace(new ArrayStateSpace(dimensions, dimensionSize)) {
     std::srand(std::time(nullptr));
 }
 

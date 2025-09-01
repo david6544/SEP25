@@ -3,7 +3,7 @@
 #define DUMB_MODEL_H
 
 #include "Model.hpp"
-#include "../StateSpace/StateSpace.hpp"
+#include "../StateSpace/ArrayStateSpace.hpp"
 
 /**
  * @brief The DumbModel is merely for testing the client - It 
@@ -11,7 +11,7 @@
  * 
  */
 class DumbModel : public Model {
-    StateSpace* stateSpace;
+    ArrayStateSpace* stateSpace;
 public:
     DumbModel(int dimensions, int dimensionSize, int totalQueries);
     std::vector<int> get_next_query() override;
