@@ -155,8 +155,15 @@ void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     observedMin = std::min(observedMin, result);
     observedMax = std::max(observedMax, result);
 
-    // Insert into tree
-    insert_point(root, query, result);
+    if (root == nullptr) {
+        std::vector<Point> data = { Point{query, result} };
+        std::vector<int> min_bound(dimensions, 0);
+        std::vector<int> max_bound(dimensions, dimensionSize - 1);
+        root = build_tree(data, min_bound, max_bound);
+    } else {
+        // Insert point into tree
+        insert_point(root, query, result);
+    }
 
     // Store for online training
     seenPoints.push_back(Point(query, result));
