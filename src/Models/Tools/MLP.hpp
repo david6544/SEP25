@@ -16,7 +16,7 @@ struct Activation {
 extern Activation sigmoid;
 extern Activation relu;
 extern Activation tanh_act;
-extern Activation identity;
+extern Activation ident;
 
 // -------------------- Layer --------------------
 struct Layer {

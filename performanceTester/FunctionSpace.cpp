@@ -15,6 +15,9 @@ int FunctionSpace::get_dimension_size() const {
     return this->dimensionSize;
 }
 
+#include <iostream>
+using namespace std;
+
 double FunctionSpace::get(const std::vector<int>& coords) const {
     if (coords.size() != dimensions)
         throw std::out_of_range("query dimension size is out of range");

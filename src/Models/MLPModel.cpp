@@ -12,7 +12,7 @@
 
 MLPModel::MLPModel(int dimensions, int dimensionSize, int queries) 
     : Model(dimensions, dimensionSize, queries), 
-    net(MLPNetwork({dimensions, 64, 64, 1}, {tanh_act, tanh_act, identity})) {
+    net(MLPNetwork({dimensions, 64, 64, 1}, {tanh_act, tanh_act, ident})) {
     
 }
 
@@ -34,6 +34,8 @@ void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves
     get_explore_leaves(node->right, leaves);
 }
 
+#include <iostream>
+using namespace std;
 
 std::vector<int> MLPModel::get_next_query() {
     if (!root) return std::vector<int>(dimensions, dimensionSize / 2);
@@ -51,6 +53,7 @@ std::vector<int> MLPModel::get_next_query() {
         for (int i = 0; i < 5; ++i) {
             auto candidate = get_random_candidate(leaf);
             double score = beta * get_exploitation_score(leaf) + alpha * get_exploration_score(leaf);
+            cout << score << endl;
             if (score > best_score) {
                 best_score = score;
                 best_candidate = candidate;
@@ -58,6 +61,7 @@ std::vector<int> MLPModel::get_next_query() {
         }
     }
 
+    cout << best_candidate.size() <<endl;
     return best_candidate;
 }
 
@@ -90,13 +94,12 @@ std::vector<int> MLPModel::get_random_candidate(TreeNode* leaf) {
 double MLPModel::get_exploitation_score(TreeNode* leaf) {
     if (leaf->points.empty()) return 0.0;
 
-    // Density factor: prefer sparsely explored leaves
-    long long totalCoords = 1;
+    double totalCoords = 1.0;
     for (int i = 0; i < dimensions; i++)
         totalCoords *= (leaf->max_bound[i] - leaf->min_bound[i] + 1);
+
     double density_score = 1.0 - ((double)leaf->points.size() / totalCoords);
 
-    // Predicted value at leaf center
     std::vector<int> center(dimensions);
     for (int i = 0; i < dimensions; i++)
         center[i] = (leaf->min_bound[i] + leaf->max_bound[i]) / 2;
@@ -106,14 +109,8 @@ double MLPModel::get_exploitation_score(TreeNode* leaf) {
     return density_score * predicted_value;
 }
 
-/**
- * @brief get the variance of the coordinates high variance indicates a level of exploration 
- * 
- * @param leaf the leaf node in question
- * @return double the score of the exploration metric
- */
 double MLPModel::get_exploration_score(TreeNode* leaf) {
-    if (leaf->points.empty()) return 1.0; // completely unexplored
+    if (leaf->points.empty()) return 1.0;
 
     double mean_pred = 0.0;
     for (auto& p : leaf->points)
@@ -127,7 +124,7 @@ double MLPModel::get_exploration_score(TreeNode* leaf) {
     }
     var /= leaf->points.size();
 
-    return var / (var + 1.0); // normalized to [0,1]
+    return var / (var + 1.0);
 }
 
 
@@ -176,14 +173,16 @@ void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     net.train_sample(x, y, 0.02);
 
     // Train on all seen points for multiple epochs
-    std::random_device rd;
-    std::mt19937 g(rd());
-    for (int epoch = 0; epoch < 50; ++epoch) {
-        std::shuffle(seenPoints.begin(), seenPoints.end(), g);
-        for (int i = 0; i < 500 && i < seenPoints.size(); i++) {
-            std::vector<double> px = normalize_input(seenPoints[i].coords, dimensionSize);
-            std::vector<double> py{normalize_output(seenPoints[i].value)};
-            net.train_sample(px, py, 0.02);
+    if (seenPoints.size() > 10){
+        std::random_device rd;
+        std::mt19937 g(rd());
+        for (int epoch = 0; epoch < 3; ++epoch) {
+            std::shuffle(seenPoints.begin(), seenPoints.end(), g);
+            for (int i = 0; i < 500 && i < seenPoints.size(); i++) {
+                std::vector<double> px = normalize_input(seenPoints[i].coords, dimensionSize);
+                std::vector<double> py{normalize_output(seenPoints[i].value)};
+                net.train_sample(px, py, 0.02);
+            }
         }
     }
 }
@@ -327,8 +326,7 @@ void MLPModel::insert_point(TreeNode* node, const std::vector<int>& query, doubl
 
 double MLPModel::predict_coordinate(const std::vector<int>& coordinate) {
     std::vector<double> x = normalize_input(coordinate, dimensionSize);
-    double y_pred = net.predict(x)[0];
-    return denormalize_output(y_pred);
+    return denormalize_output(net.predict(x)[0]);
 }
 
 

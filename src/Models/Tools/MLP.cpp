@@ -16,6 +16,11 @@ Activation sigmoid = {
     [](double x){ double s = 1.0 / (1.0 + std::exp(-x)); return s*(1-s); }
 };
 
+Activation identity = {
+    [](double x){ return x; },
+    [](double x){ return 1.0; }
+};
+
 Activation relu = {
     [](double x){ return x > 0.0 ? x : 0.0; },
     [](double x){ return x > 0.0 ? 1.0 : 0.0; }
@@ -26,7 +31,7 @@ Activation tanh_act = {
     [](double x){ double t = std::tanh(x); return 1 - t*t; }
 };
 
-Activation identity = {
+Activation ident = {
     [](double x){ return x; },
     [](double){ return 1.0; }
 };
