@@ -8,8 +8,8 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
-#elif defined(KNN)
-    #include "Models/KnnModel.hpp"
+#elif defined(MLP)
+    #include "Models/MLPModel.hpp"
     #define CurrentModel MLPModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"

@@ -1,6 +1,6 @@
-#if defined(KNN) || defined(TESTING)
-#ifndef KNN_MODEL_H
-#define KNN_MODEL_H
+#if defined(MLP) || defined(TESTING)
+#ifndef MLP_MODEL_H
+#define MLP_MODEL_H
 
 #include <limits>
 
@@ -49,7 +49,7 @@ struct TreeNode {
  */
 class MLPModel : public Model {
 private:
-    MLP net;
+    MLPNetwork net;
     std::vector<Point> seenPoints;
     TreeNode* root = nullptr;
     double observedMin = std::numeric_limits<double>::max();
@@ -75,13 +75,13 @@ private:
 
     double predict_coordinate(const std::vector<int>& coordinate);
 
-    Vec normalize_input(const std::vector<int>& coords, int dimensionSize);
+    std::vector<double> normalize_input(const std::vector<int>& coords, int dimensionSize);
     double normalize_output(double value);
     double denormalize_output(double value);
 
 public:
     /**
-     * @brief Construct a new Knn Model object
+     * @brief Construct a new MLPNetwork Model object
      * 
      * @param dimensions The number of dimensions
      * @param dimensionSize The size of the dimensions
@@ -108,5 +108,5 @@ public:
 };
 
 
-#endif // KNN_MODEL_H
+#endif // MLP_MODEL_H
 #endif

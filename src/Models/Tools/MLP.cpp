@@ -34,8 +34,8 @@ Activation identity = {
 // -------------------- Layer --------------------
 Layer::Layer(int in_, int out_, Activation act_)
     : in(in_), out(out_), act(act_),
-      W(Mat(out_, Vec(in_))), b(Vec(out_)),
-      z(Vec(out_)), a(Vec(out_))
+      W(Mat(out_, std::vector<double>(in_))), b(std::vector<double>(out_)),
+      z(std::vector<double>(out_)), a(std::vector<double>(out_))
 {
     double limit = std::sqrt(6.0 / (in + out));
     for (int i=0;i<out;i++){
@@ -46,7 +46,7 @@ Layer::Layer(int in_, int out_, Activation act_)
     }
 }
 
-Vec Layer::forward(const Vec& x) {
+std::vector<double> Layer::forward(const std::vector<double>& x) {
     assert((int)x.size() == in);
     for (int i=0;i<out;i++){
         double sum = b[i];
@@ -57,8 +57,8 @@ Vec Layer::forward(const Vec& x) {
     return a;
 }
 
-// -------------------- MLP --------------------
-MLP::MLP(const std::vector<int>& sizes,
+// -------------------- MLPNetwork --------------------
+MLPNetwork::MLPNetwork(const std::vector<int>& sizes,
          const std::vector<Activation>& acts)
 {
     assert(sizes.size() >= 2);
@@ -68,23 +68,23 @@ MLP::MLP(const std::vector<int>& sizes,
     }
 }
 
-Vec MLP::predict(const Vec& x) {
-    Vec cur = x;
+std::vector<double> MLPNetwork::predict(const std::vector<double>& x) {
+    std::vector<double> cur = x;
     for (auto& L : layers) cur = L.forward(cur);
     return cur;
 }
 
-double MLP::train_sample(const Vec& x, const Vec& y, double lr) {
+double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<double>& y, double lr) {
     // forward
-    Vec cur = x;
+    std::vector<double> cur = x;
     for (auto& L : layers) cur = L.forward(cur);
-    Vec out = cur;
+    std::vector<double> out = cur;
 
     assert(out.size() == y.size());
 
     // output delta
     int Lidx = (int)layers.size() - 1;
-    Vec delta(layers[Lidx].out);
+    std::vector<double> delta(layers[Lidx].out);
     for (int i=0;i<layers[Lidx].out;i++){
         double err = out[i] - y[i];
         delta[i] = 2.0 * err * layers[Lidx].act.df(layers[Lidx].z[i]);
@@ -93,7 +93,7 @@ double MLP::train_sample(const Vec& x, const Vec& y, double lr) {
     // backprop
     for (int li=Lidx; li>=0; --li) {
         Layer& L = layers[li];
-        Vec prev_a = (li==0) ? x : layers[li-1].a;
+        std::vector<double> prev_a = (li==0) ? x : layers[li-1].a;
 
         // update weights/biases
         for (int i=0;i<L.out;i++){
@@ -105,7 +105,7 @@ double MLP::train_sample(const Vec& x, const Vec& y, double lr) {
         }
 
         if (li > 0) {
-            Vec prev_delta(layers[li-1].out, 0.0);
+            std::vector<double> prev_delta(layers[li-1].out, 0.0);
             for (int pj=0; pj<layers[li-1].out; ++pj) {
                 double accum = 0.0;
                 for (int i=0;i<L.out;i++) {

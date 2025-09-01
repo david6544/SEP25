@@ -4,8 +4,8 @@
 #elif defined(DUMB)
     #include "../src/Models/DumbModel.hpp"
     #define CurrentModel DumbModel
-#elif defined(KNN)
-    #include "../src/Models/KnnModel.hpp"
+#elif defined(MLP)
+    #include "../src/Models/MLPModel.hpp"
     #define CurrentModel MLPModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"

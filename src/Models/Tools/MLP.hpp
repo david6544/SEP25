@@ -4,8 +4,7 @@
 #include <functional>
 
 // -------------------- Type Aliases --------------------
-using Vec = std::vector<double>;
-using Mat = std::vector<Vec>;
+using Mat = std::vector<std::vector<double>>;
 
 // -------------------- Activation Functions --------------------
 struct Activation {
@@ -23,26 +22,26 @@ extern Activation identity;
 struct Layer {
     int in, out;
     Mat W;  // weights (out x in)
-    Vec b;  // biases (out)
+    std::vector<double> b;  // biases (out)
 
     Activation act;
 
     // Cached forward values
-    Vec z;  // pre-activation
-    Vec a;  // post-activation
+    std::vector<double> z;  // pre-activation
+    std::vector<double> a;  // post-activation
 
     Layer(int in_, int out_, Activation act_);
-    Vec forward(const Vec& x);
+    std::vector<double> forward(const std::vector<double>& x);
 };
 
-// -------------------- MLP --------------------
-class MLP {
+// -------------------- MLPNetwork --------------------
+class MLPNetwork {
 public:
-    explicit MLP(const std::vector<int>& sizes,
+    explicit MLPNetwork(const std::vector<int>& sizes,
                  const std::vector<Activation>& acts);
 
-    Vec predict(const Vec& x);
-    double train_sample(const Vec& x, const Vec& y, double lr);
+    std::vector<double> predict(const std::vector<double>& x);
+    double train_sample(const std::vector<double>& x, const std::vector<double>& y, double lr);
 
 private:
     std::vector<Layer> layers;
