@@ -5,7 +5,8 @@
 
 #include "DumbModel.hpp"
 
-DumbModel::DumbModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {
+DumbModel::DumbModel(int dimensions, int dimensionSize, int totalQueries) : 
+    Model(dimensions, dimensionSize, totalQueries), stateSpace(new StateSpace(dimensions, dimensionSize)) {
     std::srand(std::time(nullptr));
 }
 
@@ -23,6 +24,10 @@ std::vector<int> DumbModel::get_next_query() {
 
 void DumbModel::update_prediction(const std::vector<int> &query, double result) {
     stateSpace->set(query, result);
+}
+
+double DumbModel::get_value_at(const std::vector<int> &query) {
+    return this->stateSpace->get(query);
 }
 
 #endif // DUMB || TESTING

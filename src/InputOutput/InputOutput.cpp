@@ -1,5 +1,7 @@
 #include "InputOutput.hpp"
 
+#include <stdexcept>
+
 InputOutput* InputOutput::instance = nullptr;
 InputOutput::InputOutput() {
     if (instance == nullptr)
