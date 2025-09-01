@@ -77,7 +77,6 @@ message(STATUS "Selected algorithm: ${ALGORITHM}")
 target_compile_definitions(sep25_main PUBLIC ${ALGORITHM})
 
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
-include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT_HASH_SHORT}")
 
 # Add performance test executable

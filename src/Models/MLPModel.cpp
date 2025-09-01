@@ -4,6 +4,8 @@
 #include <cmath>
 #include <random> 
 
+#include <iostream>
+
 #include "MLPModel.hpp"
 
 // public methods
