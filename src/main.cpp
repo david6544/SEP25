@@ -22,8 +22,7 @@ void algorithm(int dimensions, int dimensionSize, int totalQueries){
         double result = io->send_query_recieve_result(query);
         model.update_prediction(query, result);
     }
-    auto raw_state = model.get_state_space();
-    io->output_state(raw_state);
+    io->output_state(model);
 }
 
 int main(int argc, char* argv[]) {

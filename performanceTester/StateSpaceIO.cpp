@@ -19,8 +19,8 @@ double StateSpaceIO::send_query_recieve_result(const std::vector<int> &query) {
     return result;
 }
 
-void StateSpaceIO::output_state(StateSpace &predictedStateSpace) {
-    Results results = stateSpace->getResults(predictedStateSpace);
+void StateSpaceIO::output_state(Model &model) {
+    Results results = stateSpace->getResults(model);
 
     cout << "Performance Metrics:" << endl;
     cout << "-------------------" << endl;

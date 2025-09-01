@@ -1,7 +1,7 @@
 #ifndef INPUT_OUTPUT_H
 #define INPUT_OUTPUT_H
 #include <vector>
-#include "../StateSpace/ArrayStateSpace.hpp"
+#include "../Models/Model.hpp"
 
 class InputOutput {
 protected:
@@ -9,7 +9,7 @@ protected:
     InputOutput();
 public:
     virtual double send_query_recieve_result(const std::vector<int> &query) = 0;
-    virtual void output_state(StateSpace &stateSpace) = 0;
+    virtual void output_state(Model &model) = 0;
     
     static InputOutput* get_instance();
 };

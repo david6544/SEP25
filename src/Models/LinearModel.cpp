@@ -5,7 +5,8 @@
 
 #include "LinearModel.hpp"
 
-LinearModel::LinearModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries){
+LinearModel::LinearModel(int dimensions, int dimensionSize, int totalQueries) : 
+    Model(dimensions, dimensionSize, totalQueries), stateSpace(new ArrayStateSpace(dimensions, dimensionSize)) {
     std::srand(std::time(nullptr));
 }
 
@@ -91,6 +92,10 @@ int LinearModel::find_prev_nonzero_afterzero_ix(double ix) {
     // std::cout << "prev nonzero " << traversed_ix << "\n";
     // print_statespace(*this->stateSpace);
     return traversed_ix;
+}
+
+double LinearModel::get_value_at(const std::vector<int> &query) {
+    return this->stateSpace->get(query);
 }
 
 void LinearModel::update_prediction_final() {
