@@ -3,8 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <random> 
-
-#include <iostream>
+#include <climits>
 
 #include "MLPModel.hpp"
 
@@ -16,16 +15,30 @@ MLPModel::MLPModel(int dimensions, int dimensionSize, int queries)
     
 }
 
+// --- 1) safer get_explore_leaves (avoid overflow) ---
 void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves) {
     if (!node) return;
 
     if (node->is_leaf()) {
-        long long totalCoords = 1;
-        for (int i = 0; i < dimensions; i++)
-            totalCoords *= (node->max_bound[i] - node->min_bound[i] + 1);
+        // compute volume in 64-bit and guard against overflow
+        unsigned long long totalCoords = 1ULL;
+        bool overflow = false;
+        for (int i = 0; i < dimensions; ++i) {
+            unsigned long long span = (unsigned long long)(node->max_bound[i] - node->min_bound[i] + 1);
+            if (span == 0) { overflow = true; break; }
+            if (totalCoords > ULLONG_MAX / span) { overflow = true; break; }
+            totalCoords *= span;
+        }
 
-        if ((int)node->points.size() < totalCoords) { // still space to explore
-            leaves.push_back(node);
+        // if overflow, treat as "large" (so leaf is considered explorable if not full)
+        if (overflow) {
+            if ((size_t)node->points.size() < SIZE_MAX) { // effectively always true
+                leaves.push_back(node);
+            }
+        } else {
+            if ((unsigned long long)node->points.size() < totalCoords) {
+                leaves.push_back(node);
+            }
         }
         return;
     }
@@ -33,6 +46,7 @@ void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves
     get_explore_leaves(node->left, leaves);
     get_explore_leaves(node->right, leaves);
 }
+
 
 #include <iostream>
 using namespace std;
@@ -43,8 +57,8 @@ std::vector<int> MLPModel::get_next_query() {
     std::vector<TreeNode*> leaves;
     get_explore_leaves(root, leaves);
 
-    double alpha = 1.0; // exploration weight
-    double beta  = 1.0; // exploitation weight
+    double alpha = 1.5 * (((double) currentQuery)/totalQueries); // exploration weight
+    double beta  = (1 - (((double) currentQuery)/totalQueries)); // exploitation weight
 
     double best_score = -1e9;
     std::vector<int> best_candidate;
@@ -53,42 +67,46 @@ std::vector<int> MLPModel::get_next_query() {
         for (int i = 0; i < 5; ++i) {
             auto candidate = get_random_candidate(leaf);
             double score = beta * get_exploitation_score(leaf) + alpha * get_exploration_score(leaf);
-            cout << score << endl;
             if (score > best_score) {
                 best_score = score;
                 best_candidate = candidate;
             }
         }
     }
-
-    cout << best_candidate.size() <<endl;
     return best_candidate;
 }
-
 
 std::vector<int> MLPModel::get_random_candidate(TreeNode* leaf) {
     std::vector<int> candidate(dimensions);
     for (int d = 0; d < dimensions; ++d) {
         std::vector<int> dVals;
-        dVals.reserve((leaf->points.size() + 2));
-        dVals.push_back(leaf->min_bound[d]-1);
-        for (auto& p : leaf->points) 
+        dVals.reserve(leaf->points.size() + 2);
+        // Use sentinels but keep them within a reasonable range:
+        dVals.push_back(leaf->min_bound[d] - 1);
+        for (auto& p : leaf->points)
             dVals.push_back(p.coords[d]);
-        dVals.push_back(leaf->max_bound[d]+1);
-        sort(dVals.begin(), dVals.end());
-        int run[3] = {0,0,0};
-        for (int i = 1; i < dVals.size(); i++){
+        dVals.push_back(leaf->max_bound[d] + 1);
+        std::sort(dVals.begin(), dVals.end());
+
+        int bestDiff = -1;
+        int left = dVals.front(), right = dVals.back();
+        for (size_t i = 1; i < dVals.size(); ++i) {
             int diff = dVals[i] - dVals[i-1];
-            if (diff > run[0]){
-                run[0] = diff;
-                run[1] = dVals[i-1];
-                run[2] = dVals[i];
+            if (diff > bestDiff) {
+                bestDiff = diff;
+                left = dVals[i-1];
+                right = dVals[i];
             }
         }
-        candidate[d] = (run[1] + run[2])/2;
+        // pick midpoint, then clamp to the leaf bounds
+        long mid = ((long)left + (long)right) / 2;
+        if (mid < leaf->min_bound[d]) mid = leaf->min_bound[d];
+        if (mid > leaf->max_bound[d]) mid = leaf->max_bound[d];
+        candidate[d] = (int)mid;
     }
     return candidate;
 }
+
 
 
 double MLPModel::get_exploitation_score(TreeNode* leaf) {
@@ -106,7 +124,7 @@ double MLPModel::get_exploitation_score(TreeNode* leaf) {
 
     double predicted_value = predict_coordinate(center);
 
-    return density_score * predicted_value;
+    return abs(density_score * predicted_value);
 }
 
 double MLPModel::get_exploration_score(TreeNode* leaf) {
@@ -124,7 +142,7 @@ double MLPModel::get_exploration_score(TreeNode* leaf) {
     }
     var /= leaf->points.size();
 
-    return var / (var + 1.0);
+    return abs(var / (var + 1.0));
 }
 
 
@@ -136,22 +154,18 @@ std::vector<double> MLPModel::normalize_input(const std::vector<int>& coords, in
 }
 
 double MLPModel::normalize_output(double value) {
-    if (observedMax == observedMin) return 0.5; // avoid division by zero
-    return (value - observedMin) / (observedMax - observedMin);
+    return yNorm.normalize(value);
 }
 
 double MLPModel::denormalize_output(double value) {
-    return value * (observedMax - observedMin) + observedMin;
+    return yNorm.denormalize(value);
 }
 
 
 void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     currentQuery++;
 
-    // Update observed range
-    observedMin = std::min(observedMin, result);
-    observedMax = std::max(observedMax, result);
-
+    yNorm.stats.push(result);
     if (root == nullptr) {
         std::vector<Point> data = { Point{query, result} };
         std::vector<int> min_bound(dimensions, 0);
@@ -170,18 +184,19 @@ void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     std::vector<double> y{normalize_output(result)};
 
     // Train on current point
-    net.train_sample(x, y, 0.02);
-
-    // Train on all seen points for multiple epochs
-    if (seenPoints.size() > 10){
+    if (seenPoints.size() < 0.1 * pow(dimensionSize, dimensions)){
+        net.train_sample(x, y, 0.01);
+    } else {
+        net.train_sample(x, y, 0.01);
+        // Train on all seen points for multiple epochs
         std::random_device rd;
         std::mt19937 g(rd());
-        for (int epoch = 0; epoch < 3; ++epoch) {
+        for (int epoch = 0; epoch < 4 + (((double)currentQuery)/totalQueries) * 46; ++epoch) {
             std::shuffle(seenPoints.begin(), seenPoints.end(), g);
-            for (int i = 0; i < 500 && i < seenPoints.size(); i++) {
+            for (int i = 0; i < 32 && i < seenPoints.size(); i++) {
                 std::vector<double> px = normalize_input(seenPoints[i].coords, dimensionSize);
                 std::vector<double> py{normalize_output(seenPoints[i].value)};
-                net.train_sample(px, py, 0.02);
+                net.train_sample(px, py, 0.01);
             }
         }
     }

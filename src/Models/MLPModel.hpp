@@ -3,6 +3,7 @@
 #define MLP_MODEL_H
 
 #include <limits>
+#include <cmath>
 
 #include "Model.hpp"
 #include "Tools/MLP.hpp"
@@ -42,6 +43,37 @@ struct TreeNode {
     }
 };
 
+struct RunningStats {
+    double mean = 0.0;
+    double m2   = 0.0;   // sum of squares of differences from the current mean
+    size_t n    = 0;
+
+    void push(double x) {
+        n++;
+        double delta = x - mean;
+        mean += delta / n;
+        double delta2 = x - mean;
+        m2 += delta * delta2;
+    }
+
+    double variance() const { return (n > 1) ? m2 / (n - 1) : 1.0; }
+    double stddev()   const { return std::sqrt(variance() + 1e-8); }
+};
+
+struct Normalizer {
+    RunningStats stats;
+
+    double normalize(double y) {
+        if (stats.n < 2) return y; // not enough data yet, pass through
+        return (y - stats.mean) / stats.stddev();
+    }
+
+    double denormalize(double y) {
+        if (stats.n < 2) return y; // not enough data yet, pass through
+        return y * stats.stddev() + stats.mean;
+    }
+};
+
 /**
  * @brief The DumbModel is merely for testing the client - It 
  * randomly picks query points and sets statespace[query point] = returned value
@@ -52,8 +84,7 @@ private:
     MLPNetwork net;
     std::vector<Point> seenPoints;
     TreeNode* root = nullptr;
-    double observedMin = std::numeric_limits<double>::max();
-    double observedMax = std::numeric_limits<double>::lowest();
+    Normalizer yNorm;
     int min_leaf_size = 3;
     int variance_threshold = 0.03;
     

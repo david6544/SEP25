@@ -12,23 +12,41 @@ static double rand_uniform(double a = -1.0, double b = 1.0) {
 
 // -------------------- Activations --------------------
 Activation sigmoid = {
-    [](double x){ return 1.0 / (1.0 + std::exp(-x)); },
-    [](double x){ double s = 1.0 / (1.0 + std::exp(-x)); return s*(1-s); }
+    [](double x){
+        if (x >= 0) {
+            double z = std::exp(-x);
+            return 1.0 / (1.0 + z);
+        } else {
+            double z = std::exp(x);
+            return z / (1.0 + z);
+        }
+    },
+    [](double x){
+        double s;
+        if (x >= 0) {
+            double z = std::exp(-x);
+            s = 1.0 / (1.0 + z);
+        } else {
+            double z = std::exp(x);
+            s = z / (1.0 + z);
+        }
+        return s * (1.0 - s);
+    }
 };
 
-Activation identity = {
-    [](double x){ return x; },
-    [](double x){ return 1.0; }
+Activation tanh_act = {
+    [](double x){ return std::tanh(x); },
+    [](double x){
+        double t = std::tanh(x);
+        double df = 1.0 - t*t;
+        if (!std::isfinite(df)) return 0.0;
+        return df;
+    }
 };
 
 Activation relu = {
     [](double x){ return x > 0.0 ? x : 0.0; },
     [](double x){ return x > 0.0 ? 1.0 : 0.0; }
-};
-
-Activation tanh_act = {
-    [](double x){ return std::tanh(x); },
-    [](double x){ double t = std::tanh(x); return 1 - t*t; }
 };
 
 Activation ident = {
@@ -93,6 +111,7 @@ double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<
     for (int i=0;i<layers[Lidx].out;i++){
         double err = out[i] - y[i];
         delta[i] = 2.0 * err * layers[Lidx].act.df(layers[Lidx].z[i]);
+        if (!std::isfinite(delta[i])) delta[i] = 0.0; // guard
     }
 
     // backprop
@@ -100,13 +119,13 @@ double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<
         Layer& L = layers[li];
         std::vector<double> prev_a = (li==0) ? x : layers[li-1].a;
 
-        // update weights/biases
         for (int i=0;i<L.out;i++){
             for (int j=0;j<L.in;j++){
-                double grad_w = delta[i] * prev_a[j];
+                double grad_w = std::clamp(delta[i] * prev_a[j], -5.0, 5.0);
+                if (!std::isfinite(grad_w)) grad_w = 0.0;
                 L.W[i][j] -= lr * grad_w;
             }
-            L.b[i] -= lr * delta[i];
+            if (std::isfinite(delta[i])) L.b[i] -= lr * delta[i];
         }
 
         if (li > 0) {
@@ -116,7 +135,8 @@ double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<
                 for (int i=0;i<L.out;i++) {
                     accum += L.W[i][pj] * delta[i];
                 }
-                prev_delta[pj] = accum * layers[li-1].act.df(layers[li-1].z[pj]);
+                double d = accum * layers[li-1].act.df(layers[li-1].z[pj]);
+                prev_delta[pj] = std::isfinite(d) ? d : 0.0;
             }
             delta = std::move(prev_delta);
         }
@@ -126,7 +146,7 @@ double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<
     double sq = 0.0;
     for (size_t i=0;i<y.size();++i){
         double e = out[i] - y[i];
-        sq += e*e;
+        if (std::isfinite(e)) sq += e*e;
     }
     return sq;
 }

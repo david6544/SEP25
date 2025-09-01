@@ -84,8 +84,8 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
 
 
 int main(void) {
-    int dimensions = 1, dimensionSize = 100, queries = 70;
-    auto func = testfunctions::griewank;
+    int dimensions = 2, dimensionSize = 10, queries = 70;
+    auto func = testfunctions::ackleyFunction;
     //runSeveral(dimensions,dimensionSize, func);
     runSingle(dimensions, dimensionSize, queries, func);
 }
