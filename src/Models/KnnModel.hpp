@@ -2,7 +2,10 @@
 #ifndef KNN_MODEL_H
 #define KNN_MODEL_H
 
+#include <limits>
+
 #include "Model.hpp"
+#include "Tools/MLP.hpp"
 
 /**
  * @brief The coordinates of the point (queried) and the value at that queried location
@@ -44,9 +47,13 @@ struct TreeNode {
  * randomly picks query points and sets statespace[query point] = returned value
  * 
  */
-class KnnModel : public Model {
+class MLPModel : public Model {
 private:
+    MLP net;
+    std::vector<Point> seenPoints;
     TreeNode* root = nullptr;
+    double observedMin = std::numeric_limits<double>::max();
+    double observedMax = std::numeric_limits<double>::lowest();
     int min_leaf_size = 3;
     int variance_threshold = 0.03;
     
@@ -68,7 +75,9 @@ private:
 
     double predict_coordinate(const std::vector<int>& coordinate);
 
-    void updateStateSpace(std::vector<int>& coords, int idx);
+    Vec normalize_input(const std::vector<int>& coords, int dimensionSize);
+    double normalize_output(double value);
+    double denormalize_output(double value);
 
 public:
     /**
@@ -78,7 +87,7 @@ public:
      * @param dimensionSize The size of the dimensions
      * @param totalQueries The total number of queries available
      */
-    KnnModel(int dimensions, int dimensionSize, int totalQueries);
+    MLPModel(int dimensions, int dimensionSize, int totalQueries);
 
     /**
      * @brief Get the next query object
@@ -94,6 +103,8 @@ public:
      * @param result result returned from black box for our query
      */
     void update_prediction(const std::vector<int> &query, double result) override;
+
+    double get_value_at(const std::vector<int> &query) override;
 };
 
 

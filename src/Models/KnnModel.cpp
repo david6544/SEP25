@@ -1,16 +1,20 @@
 #if defined(KNN) || defined(TESTING)
 #include <vector>
 #include <algorithm>
+#include <cmath>
+#include <random> 
 
 #include "KnnModel.hpp"
 
 // public methods
 
-KnnModel::KnnModel(int dimensions, int dimensionSize, int queries) : Model(dimensions, dimensionSize, queries) {
+MLPModel::MLPModel(int dimensions, int dimensionSize, int queries) 
+    : Model(dimensions, dimensionSize, queries), 
+    net(MLP({dimensions, 64, 64, 1}, {tanh_act, tanh_act, identity})) {
     
 }
 
-void KnnModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves) {
+void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves) {
     if (!node) return;
 
     if (node->is_leaf()) {
@@ -29,7 +33,7 @@ void KnnModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves
 }
 
 
-std::vector<int> KnnModel::get_next_query() {
+std::vector<int> MLPModel::get_next_query() {
     if (root == nullptr) {
         // first query: midpoint
         return std::vector<int>(dimensions, dimensionSize / 2);
@@ -58,7 +62,7 @@ std::vector<int> KnnModel::get_next_query() {
     return best_candidate;
 }
 
-std::vector<int> KnnModel::get_random_candidate(TreeNode* leaf) {
+std::vector<int> MLPModel::get_random_candidate(TreeNode* leaf) {
     std::vector<int> candidate(dimensions);
     for (int d = 0; d < dimensions; ++d) {
         std::vector<int> dVals;
@@ -83,13 +87,26 @@ std::vector<int> KnnModel::get_random_candidate(TreeNode* leaf) {
 }
 
 
-double KnnModel::get_exploitation_score(TreeNode* leaf) {
-    long long totalCoordinates = 1;
-    for (int i = 0; i < dimensions; i++){
-        totalCoordinates *= (leaf->max_bound[i]-leaf->min_bound[i] + 1);
-    }
-    return ((double) totalCoordinates -  leaf->points.size()) / totalCoordinates;
+double MLPModel::get_exploitation_score(TreeNode* leaf) {
+    if (leaf->points.empty()) return 0.0;
+
+    double totalCoords = 1.0;
+    for (int i = 0; i < dimensions; i++)
+        totalCoords *= (leaf->max_bound[i] - leaf->min_bound[i] + 1);
+
+    double density_score = 1.0 - ((double)leaf->points.size() / totalCoords);
+
+    // Predict average value for leaf center
+    std::vector<int> center(dimensions);
+    for (int i = 0; i < dimensions; i++)
+        center[i] = (leaf->min_bound[i] + leaf->max_bound[i]) / 2;
+
+    double predicted_value = predict_coordinate(center);
+
+    // Combine density + predicted value
+    return density_score * predicted_value;
 }
+
 
 /**
  * @brief get the variance of the coordinates high variance indicates a level of exploration 
@@ -97,45 +114,78 @@ double KnnModel::get_exploitation_score(TreeNode* leaf) {
  * @param leaf the leaf node in question
  * @return double the score of the exploration metric
  */
-double KnnModel::get_exploration_score(TreeNode* leaf) {
+double MLPModel::get_exploration_score(TreeNode* leaf) {
     if (leaf->points.empty()) return 1.0; // completely unexplored
 
-    double avgPred = 0.0;
-    for (auto& p : leaf->points) avgPred += p.value;
-    avgPred /= leaf->points.size();
+    double score = 0.0;
+    int N = std::min(5, (int)leaf->points.size());
 
-    double predVar = 0.0;
-    for (auto& p : leaf->points) {
-        double diff = p.value - avgPred;
-        predVar += diff * diff;
+    // sample N points from leaf and compute prediction variance
+    for (int i = 0; i < N; i++) {
+        auto &p = leaf->points[i];
+        Vec x(p.coords.begin(), p.coords.end());
+        double pred = net.predict(x)[0];
+        double diff = pred - p.value;
+        score += diff * diff;
     }
-    predVar /= leaf->points.size();
+    score /= N;
 
-    // Normalize by some max variance
-    return predVar / (1.0 + predVar);
+    // normalize to [0,1] with small smoothing
+    return score / (1.0 + score);
 }
 
-void KnnModel::update_prediction(const std::vector<int> &query, double result){
+Vec MLPModel::normalize_input(const std::vector<int>& coords, int dimensionSize) {
+    Vec x(coords.size());
+    for (int i = 0; i < coords.size(); ++i)
+        x[i] = coords[i] / (dimensionSize - 1.0);
+    return x;
+}
+
+double MLPModel::normalize_output(double value) {
+    if (observedMax == observedMin) return 0.5; // avoid division by zero
+    return (value - observedMin) / (observedMax - observedMin);
+}
+
+double MLPModel::denormalize_output(double value) {
+    return value * (observedMax - observedMin) + observedMin;
+}
+
+
+void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     currentQuery++;
 
-    if (root == nullptr) {
-        std::vector<Point> data = { Point(query, result) };
-        std::vector<int> min_bound(dimensions, 0);
-        std::vector<int> max_bound(dimensions, dimensionSize - 1);
-        root = build_tree(data, min_bound, max_bound);
-        return;
-    }
-
-    // Insert point into tree
+    // Insert into tree
     insert_point(root, query, result);
 
-    if (currentQuery == totalQueries){
-        std::vector<int> initialQuery(dimensions, 0);
-        updateStateSpace(initialQuery, 0);
+    // Store for online training
+    seenPoints.push_back(Point(query, result));
+
+    observedMin = std::min(observedMin, result);
+    observedMax = std::max(observedMax, result);
+
+
+    // Normalize input/output
+    Vec x = normalize_input(query, dimensionSize);
+    Vec y{normalize_output(result)}; // max output = 90.0
+
+    // Train on current point
+    net.train_sample(x, y, 0.02);
+
+    // Train on all seen points for a few epochs
+    std::random_device rd;
+    std::mt19937 g(rd());
+    for (int epoch = 0; epoch < 10; ++epoch) {
+        std::shuffle(seenPoints.begin(), seenPoints.end(), g);
+        for (auto &p : seenPoints) {
+            Vec px = normalize_input(p.coords, dimensionSize);
+            Vec py{normalize_output(p.value)};
+            net.train_sample(px, py, 0.02);
+        }
     }
 }
 
-TreeNode* KnnModel::build_tree(std::vector<Point>& data,
+
+TreeNode* MLPModel::build_tree(std::vector<Point>& data,
                                const std::vector<int>& min_bound,
                                const std::vector<int>& max_bound) {
     TreeNode* node = new TreeNode();
@@ -214,7 +264,7 @@ TreeNode* KnnModel::build_tree(std::vector<Point>& data,
 
 
 // Find leaf for a query
-TreeNode* KnnModel::find_leaf(TreeNode* node, const std::vector<int>& query) {
+TreeNode* MLPModel::find_leaf(TreeNode* node, const std::vector<int>& query) {
     if (node->is_leaf()) return node;
     if (query[node->split_dimension] <= node->split_value)
         return find_leaf(node->left, query);
@@ -222,7 +272,7 @@ TreeNode* KnnModel::find_leaf(TreeNode* node, const std::vector<int>& query) {
         return find_leaf(node->right, query);
 }
 
-double KnnModel::get_variance(std::vector<Point>& data){
+double MLPModel::get_variance(std::vector<Point>& data){
     if (data.empty()) return 1.0; // completely unexplored
 
     double avgPred = 0.0;
@@ -241,9 +291,8 @@ double KnnModel::get_variance(std::vector<Point>& data){
 }
 
 // Insert point and split if necessary
-void KnnModel::insert_point(TreeNode* node, const std::vector<int>& query, double result) {
+void MLPModel::insert_point(TreeNode* node, const std::vector<int>& query, double result) {
     if (!node) {
-        std::cerr << "insert_point got nullptr node!\n";
         return;
     }
 
@@ -272,121 +321,15 @@ void KnnModel::insert_point(TreeNode* node, const std::vector<int>& query, doubl
     }
 }
 
-struct Neighbor {
-    double dist2;
-    double value;
-    bool operator<(const Neighbor& other) const { return dist2 < other.dist2; }
-};
-
-void collect_neighbors(TreeNode* node,
-                       const std::vector<int>& coord,
-                       int K,
-                       std::vector<Neighbor>& heap,
-                       bool &found_exact) {
-    if (!node || found_exact) return;
-
-    if (node->is_leaf()) {
-        for (auto& p : node->points) {
-            double dist2 = 0.0;
-            for (int d = 0; d < (int)coord.size(); ++d) {
-                double diff = (double)p.coords[d] - coord[d];
-                dist2 += diff * diff;
-            }
-
-            if (dist2 == 0.0) {
-                // exact match -> store it and signal to stop everything
-                heap.clear();
-                heap.push_back({0.0, p.value});
-                // no need to heapify for single element
-                found_exact = true;
-                return;
-            }
-
-            if ((int)heap.size() < K) {
-                heap.push_back({dist2, p.value});
-                std::push_heap(heap.begin(), heap.end()); // maintain max-heap
-            } else {
-                // ensure heap[0] is the largest dist2 (max-heap)
-                if (dist2 < heap.front().dist2) {
-                    std::pop_heap(heap.begin(), heap.end()); // moves largest to back
-                    heap.back() = {dist2, p.value};
-                    std::push_heap(heap.begin(), heap.end());
-                }
-            }
-        }
-        return;
-    }
-
-    // Decide which side to explore first
-    int dim = node->split_dimension;
-    double val = coord[dim];
-
-    TreeNode* first = (val <= node->split_value) ? node->left : node->right;
-    TreeNode* second = (val <= node->split_value) ? node->right : node->left;
-
-    // Explore closer side first
-    collect_neighbors(first, coord, K, heap, found_exact);
-    if (found_exact) return;
-
-    // Decide whether to explore other side
-    double diff = val - node->split_value;
-    double diff2 = diff * diff;
-
-    // Only explore if closer side didn't already give enough close points
-    if ((int)heap.size() < K || diff2 < heap.front().dist2) {
-        collect_neighbors(second, coord, K, heap, found_exact);
-    }
-}
-
-
-double KnnModel::predict_coordinate(const std::vector<int>& coordinate){
-    int K = 5;
-    if (!root) return 0.0;
-
-    std::vector<Neighbor> neighbors;
-    neighbors.reserve(K);
-
-    bool found_exact = false;
-    collect_neighbors(root, coordinate, K, neighbors, found_exact);
-
-    // If exact match found
-    if (found_exact && neighbors.size() == 1 && neighbors[0].dist2 == 0.0) {
-        return neighbors[0].value;
-    }
-
-    if (neighbors.empty()) {
-        // no neighbors found -> fallback (choose sensible default)
-        return 0.0;
-    }
-
-    // Make sure neighbors is a heap (it should already be) and then use them
-    std::make_heap(neighbors.begin(), neighbors.end());
-
-    double weightedSum = 0.0, weightTotal = 0.0;
-    double epsilon = 1e-6;
-
-    // Note: neighbors is a max-heap, but we can iterate normally
-    for (auto& n : neighbors) {
-        double w = 1.0 / (std::sqrt(n.dist2) + epsilon); // inverse distance weighting
-        weightedSum += w * n.value;
-        weightTotal += w;
-    }
-
-    return (weightTotal > 0.0) ? (weightedSum / weightTotal) : 0.0;
+double MLPModel::predict_coordinate(const std::vector<int>& coordinate){
+    Vec x(coordinate.begin(), coordinate.end());
+    Vec pred = net.predict(x);
+    return denormalize_output(pred[0]);
 }
 
 
 
-void KnnModel::updateStateSpace(std::vector<int>& coords, int idx){
-    if (idx == dimensions) {
-        stateSpace->set(coords, predict_coordinate(coords));
-        return;
-    };
-
-    for (int x = 0; x < dimensionSize; x++){
-        coords[idx] = x;
-        updateStateSpace(coords, idx + 1);
-    }
-    coords[idx] = 0;
+double MLPModel::get_value_at(const std::vector<int> &query){
+    return predict_coordinate(query);
 }
 #endif

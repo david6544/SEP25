@@ -16,9 +16,6 @@ int FunctionSpace::get_dimension_size() const {
 }
 
 double FunctionSpace::get(const std::vector<int>& coords) const {
-    for (auto i : coords)
-        std::cout << i << " ";
-    std::cout << std::endl;
     if (coords.size() != dimensions)
         throw std::out_of_range("query dimension size is out of range");
     
@@ -31,11 +28,7 @@ double FunctionSpace::get(const std::vector<int>& coords) const {
 
 
 
-void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int dimension){
-    for (auto i : query)
-        std::cout << i << " ";
-    std::cout << std::endl;
-    
+void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int dimension){    
     if (dimension == query.size()){
         return;
     }
