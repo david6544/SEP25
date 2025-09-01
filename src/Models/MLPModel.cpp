@@ -178,11 +178,11 @@ void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     // Train on all seen points for multiple epochs
     std::random_device rd;
     std::mt19937 g(rd());
-    for (int epoch = 0; epoch < 3; ++epoch) {
+    for (int epoch = 0; epoch < 50; ++epoch) {
         std::shuffle(seenPoints.begin(), seenPoints.end(), g);
-        for (auto &p : seenPoints) {
-            std::vector<double> px = normalize_input(p.coords, dimensionSize);
-            std::vector<double> py{normalize_output(p.value)};
+        for (int i = 0; i < 500 && i < seenPoints.size(); i++) {
+            std::vector<double> px = normalize_input(seenPoints[i].coords, dimensionSize);
+            std::vector<double> py{normalize_output(seenPoints[i].value)};
             net.train_sample(px, py, 0.02);
         }
     }
