@@ -80,8 +80,11 @@ target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
 include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT_HASH_SHORT}")
 
-# Include dirs
-target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
+# Add performance test executable
+file(GLOB PERFORMANCE_FILES performanceTester/*.cpp)
+add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
+target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
+target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM})
 
 # GoogleTest setup (unchanged)
 include(FetchContent)

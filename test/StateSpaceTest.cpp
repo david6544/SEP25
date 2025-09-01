@@ -1,12 +1,10 @@
 #include <iostream>
 #include <gtest/gtest.h>
 
-#include "../src/StateSpace/StateSpace.hpp"
-
-using namespace std;
+#include "../src/StateSpace/ArrayStateSpace.hpp"
 
 TEST(TestStateSpace, TestsGetAndSetIn1D){
-    StateSpace mySpace(1, 5);
+    ArrayStateSpace mySpace(1, 5);
     ASSERT_EQ(0.0, mySpace.get({1}));
     mySpace.set({1}, -1);
     ASSERT_EQ(-1.0, mySpace.get({1}));
@@ -14,11 +12,11 @@ TEST(TestStateSpace, TestsGetAndSetIn1D){
 
 TEST(TestStateSpace, TestsGetAndSetInND){
     for (int i = 1; i < 6; i++){
-        StateSpace mySpace(i, 10);
+        ArrayStateSpace mySpace(i, 10);
         EXPECT_EQ(i, mySpace.get_dimensions());
         EXPECT_EQ(10, mySpace.get_dimension_size());
 
-        vector<int> point(i, i);
+        std::vector<int> point(i, i);
     
         EXPECT_EQ(0.0, mySpace.get(point));
         EXPECT_NO_THROW(mySpace.set(point, 23));
@@ -27,7 +25,7 @@ TEST(TestStateSpace, TestsGetAndSetInND){
 }
 
 TEST(TestStateSpace, TestsErrorThrowing){
-    StateSpace mySpace(1, 5);
+    ArrayStateSpace mySpace(1, 5);
 
     EXPECT_THROW(mySpace.get({6}), std::out_of_range);
 
@@ -36,7 +34,7 @@ TEST(TestStateSpace, TestsErrorThrowing){
     EXPECT_THROW(mySpace.get({5, 5}), std::invalid_argument);
 
 
-    StateSpace mySpace2(4, 4);
+    ArrayStateSpace mySpace2(4, 4);
     
     EXPECT_THROW(mySpace2.get({1,1,1,5}), std::out_of_range);
     EXPECT_THROW(mySpace2.set({1,1,1,5}, 1), std::out_of_range);
