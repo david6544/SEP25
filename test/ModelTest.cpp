@@ -3,7 +3,6 @@
 
 #include "../src/Models/DumbModel.hpp"
 
-using namespace std;
 
 TEST(TestModel, TestsModel1D){
     DumbModel myModel(1, 10, 10);
@@ -24,7 +23,7 @@ TEST(TestModel, TestsModelND){
     for (int i = 1; i < 6; i++){
         DumbModel myModel(i, 10, 10);
         
-        vector<int> queryPoint(i, 0);
+        std::vector<int> queryPoint(i, 0);
 
         // test functionality
         EXPECT_EQ(i, myModel.get_next_query().size());
