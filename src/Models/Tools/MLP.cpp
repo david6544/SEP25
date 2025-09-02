@@ -97,7 +97,9 @@ std::vector<double> MLPNetwork::predict(const std::vector<double>& x) {
     return cur;
 }
 
-double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<double>& y, double lr) {
+double MLPNetwork::train_sample(const std::vector<double>& x,
+                                const std::vector<double>& y,
+                                double lr) {
     // forward
     std::vector<double> cur = x;
     for (auto& L : layers) cur = L.forward(cur);
@@ -105,34 +107,42 @@ double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<
 
     assert(out.size() == y.size());
 
-    // output delta
+    // output delta (squared error derivative)
     int Lidx = (int)layers.size() - 1;
     std::vector<double> delta(layers[Lidx].out);
-    for (int i=0;i<layers[Lidx].out;i++){
+    for (int i=0; i<layers[Lidx].out; i++) {
         double err = out[i] - y[i];
         delta[i] = 2.0 * err * layers[Lidx].act.df(layers[Lidx].z[i]);
-        if (!std::isfinite(delta[i])) delta[i] = 0.0; // guard
+        if (!std::isfinite(delta[i])) delta[i] = 0.0;
     }
 
-    // backprop
+    const double wd = 1e-4;  // weight decay strength
+
+    // backpropagation
     for (int li=Lidx; li>=0; --li) {
         Layer& L = layers[li];
         std::vector<double> prev_a = (li==0) ? x : layers[li-1].a;
 
-        for (int i=0;i<L.out;i++){
-            for (int j=0;j<L.in;j++){
-                double grad_w = std::clamp(delta[i] * prev_a[j], -5.0, 5.0);
+        for (int i=0; i<L.out; i++) {
+            for (int j=0; j<L.in; j++) {
+                double grad_w = delta[i] * prev_a[j];
+                grad_w = std::clamp(grad_w, -5.0, 5.0);
                 if (!std::isfinite(grad_w)) grad_w = 0.0;
+
+                // apply L2 penalty
+                grad_w += wd * L.W[i][j];
+
                 L.W[i][j] -= lr * grad_w;
             }
-            if (std::isfinite(delta[i])) L.b[i] -= lr * delta[i];
+            if (std::isfinite(delta[i]))
+                L.b[i] -= lr * delta[i];
         }
 
         if (li > 0) {
             std::vector<double> prev_delta(layers[li-1].out, 0.0);
             for (int pj=0; pj<layers[li-1].out; ++pj) {
                 double accum = 0.0;
-                for (int i=0;i<L.out;i++) {
+                for (int i=0; i<L.out; i++) {
                     accum += L.W[i][pj] * delta[i];
                 }
                 double d = accum * layers[li-1].act.df(layers[li-1].z[pj]);
@@ -142,11 +152,12 @@ double MLPNetwork::train_sample(const std::vector<double>& x, const std::vector<
         }
     }
 
-    // squared error
+    // squared error (return value)
     double sq = 0.0;
-    for (size_t i=0;i<y.size();++i){
+    for (size_t i=0; i<y.size(); ++i) {
         double e = out[i] - y[i];
         if (std::isfinite(e)) sq += e*e;
     }
     return sq;
 }
+

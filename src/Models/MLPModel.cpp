@@ -2,7 +2,6 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
-#include <random> 
 #include <climits>
 
 #include "MLPModel.hpp"
@@ -11,7 +10,7 @@
 
 MLPModel::MLPModel(int dimensions, int dimensionSize, int queries) 
     : Model(dimensions, dimensionSize, queries), 
-    net(MLPNetwork({dimensions, 64, 64, 1}, {tanh_act, tanh_act, ident})) {
+    net(MLPNetwork({dimensions, 32, 16, 1}, {tanh_act, tanh_act, ident})) {
     
 }
 
@@ -48,33 +47,103 @@ void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves
 }
 
 
-#include <iostream>
-using namespace std;
+// helper: squared euclidean distance
+static inline double sqdist(const std::vector<int>& a, const std::vector<int>& b){
+    double s=0; for(size_t i=0;i<a.size();++i){ double d=a[i]-b[i]; s+=d*d; } return s;
+}
+
+// helper: local variance of *observed values* in a leaf (not normalized by predVar/(1+predVar))
+static inline double leaf_value_variance(TreeNode* leaf){
+    if (!leaf || leaf->points.size() < 2) return 1.0; // high uncertainty if empty/small
+    double mean=0; for (auto& p: leaf->points) mean += p.value; mean/=leaf->points.size();
+    double v=0; for (auto& p: leaf->points){ double d=p.value-mean; v += d*d; }
+    v /= (leaf->points.size()-1);
+    // clamp to avoid crazy numbers
+    if (!std::isfinite(v)) v = 1.0;
+    return std::max(1e-6, v);
+}
 
 std::vector<int> MLPModel::get_next_query() {
     if (!root) return std::vector<int>(dimensions, dimensionSize / 2);
 
     std::vector<TreeNode*> leaves;
     get_explore_leaves(root, leaves);
+    if (leaves.empty()){
+        // fallback center
+        return std::vector<int>(dimensions, dimensionSize / 2);
+    }
 
-    double alpha = 1.5 * (((double) currentQuery)/totalQueries); // exploration weight
-    double beta  = (1 - (((double) currentQuery)/totalQueries)); // exploitation weight
+    // scale k(t): start exploring more, exploit later
+    const double t = std::max(1, currentQuery);
+    const double progress = std::min(1.0, (double)currentQuery / std::max(1, totalQueries));
+    const double k = 1.5 * (1.0 - progress) + 0.25; // from ~1.75 → 0.25
 
-    double best_score = -1e9;
+    double best_score = -std::numeric_limits<double>::infinity();
     std::vector<int> best_candidate;
 
     for (auto leaf : leaves) {
-        for (int i = 0; i < 5; ++i) {
+        // try a few candidates per leaf
+        for (int i = 0; i < 6; ++i) {
             auto candidate = get_random_candidate(leaf);
-            double score = beta * get_exploitation_score(leaf) + alpha * get_exploration_score(leaf);
+            // skip if we've seen it before
+            if (value_cache.find(candidate) != value_cache.end()) continue;
+
+            double mu = predict_coordinate(candidate);
+            double v_leaf = leaf_value_variance(leaf);
+            double d_nn = leaf_nn_distance(leaf, candidate); // ≥0
+            // combine: larger var and larger distance => larger sigma
+            double sigma = std::sqrt(v_leaf) * std::sqrt(1.0 + d_nn);
+
+            double score = mu + k * sigma;  // UCB
             if (score > best_score) {
                 best_score = score;
-                best_candidate = candidate;
+                best_candidate = std::move(candidate);
             }
         }
     }
+
+    if (best_candidate.empty()){
+        // everything proposed was seen; pick a simple unseen fallback
+        // scan leaves for first unseen center
+        for (auto leaf : leaves){
+            std::vector<int> c(dimensions);
+            for (int d=0; d<dimensions; ++d) c[d] = (leaf->min_bound[d] + leaf->max_bound[d]) / 2;
+            if (value_cache.find(c) == value_cache.end()) return c;
+        }
+        // absolute last resort: random within full space until unseen is found (bounded attempts)
+        for (int tries=0; tries<64; ++tries){
+            std::vector<int> r(dimensions);
+            for (int d=0; d<dimensions; ++d){
+                std::uniform_int_distribution<int> dist(0, dimensionSize-1);
+                r[d] = dist(rd);
+            }
+            if (value_cache.find(r) == value_cache.end()) return r;
+        }
+        // give up: return center
+        return std::vector<int>(dimensions, dimensionSize/2);
+    }
     return best_candidate;
 }
+
+// nearest-neighbor distance in leaf (pixels/coords). If none, use diagonal length of leaf.
+double MLPModel::leaf_nn_distance(TreeNode* leaf, const std::vector<int>& x) {
+    if (!leaf || leaf->points.empty()){
+        // diagonal length as a rough upper distance
+        double s = 0;
+        for (int d=0; d<dimensions; ++d){
+            double dd = (leaf? (leaf->max_bound[d]-leaf->min_bound[d]) : (dimensionSize-1));
+            s += dd*dd;
+        }
+        return std::sqrt(s);
+    }
+    double best = std::numeric_limits<double>::infinity();
+    for (auto& p: leaf->points){
+        double d = std::sqrt(sqdist(x, p.coords));
+        if (d < best) best = d;
+    }
+    return best;
+}
+
 
 std::vector<int> MLPModel::get_random_candidate(TreeNode* leaf) {
     std::vector<int> candidate(dimensions);
@@ -163,10 +232,15 @@ double MLPModel::denormalize_output(double value) {
 
 
 void MLPModel::update_prediction(const std::vector<int>& query, double result) {
+    value_cache[query] = result;
+    static int counter;
     currentQuery++;
 
     yNorm.stats.push(result);
+    seenPoints.push_back(Point(query, result));
+
     if (root == nullptr) {
+        counter = 1;
         std::vector<Point> data = { Point{query, result} };
         std::vector<int> min_bound(dimensions, 0);
         std::vector<int> max_bound(dimensions, dimensionSize - 1);
@@ -175,28 +249,24 @@ void MLPModel::update_prediction(const std::vector<int>& query, double result) {
         // Insert point into tree
         insert_point(root, query, result);
     }
+    
+    if (currentQuery >= (totalQueries * 0.1) * counter){
+        counter++;
 
-    // Store for online training
-    seenPoints.push_back(Point(query, result));
+        const int epochs = 60;
+        const int batch  = 64;
 
-    // Normalize input/output
-    std::vector<double> x = normalize_input(query, dimensionSize);
-    std::vector<double> y{normalize_output(result)};
-
-    // Train on current point
-    if (seenPoints.size() < 0.1 * pow(dimensionSize, dimensions)){
-        net.train_sample(x, y, 0.01);
-    } else {
-        net.train_sample(x, y, 0.01);
-        // Train on all seen points for multiple epochs
-        std::random_device rd;
         std::mt19937 g(rd());
-        for (int epoch = 0; epoch < 4 + (((double)currentQuery)/totalQueries) * 46; ++epoch) {
+
+        for (int epoch = 0; epoch < epochs; ++epoch) {
             std::shuffle(seenPoints.begin(), seenPoints.end(), g);
-            for (int i = 0; i < 32 && i < seenPoints.size(); i++) {
-                std::vector<double> px = normalize_input(seenPoints[i].coords, dimensionSize);
-                std::vector<double> py{normalize_output(seenPoints[i].value)};
-                net.train_sample(px, py, 0.01);
+            for (size_t start = 0; start < seenPoints.size(); start += batch) {
+                size_t end = std::min(start + batch, seenPoints.size());
+                for (size_t i = start; i < end; ++i) {
+                    std::vector<double> px = normalize_input(seenPoints[i].coords, dimensionSize);
+                    std::vector<double> py{normalize_output(seenPoints[i].value)};
+                    net.train_sample(px, py, 0.01); // weight decay applied inside (see next patch)
+                }
             }
         }
     }
@@ -340,6 +410,9 @@ void MLPModel::insert_point(TreeNode* node, const std::vector<int>& query, doubl
 }
 
 double MLPModel::predict_coordinate(const std::vector<int>& coordinate) {
+    if (value_cache.find(coordinate) != value_cache.end()) 
+        return value_cache[coordinate];
+
     std::vector<double> x = normalize_input(coordinate, dimensionSize);
     return denormalize_output(net.predict(x)[0]);
 }

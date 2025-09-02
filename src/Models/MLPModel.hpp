@@ -4,9 +4,24 @@
 
 #include <limits>
 #include <cmath>
+#include <unordered_map>
+#include <random> 
 
 #include "Model.hpp"
 #include "Tools/MLP.hpp"
+
+struct VecHash {
+    size_t operator()(const std::vector<int>& v) const noexcept {
+        // FNV-1a like mix
+        size_t h = 1469598103934665603ull;
+        for (int x : v) {
+            size_t y = static_cast<size_t>(x) + 0x9e3779b97f4a7c15ull;
+            h ^= y;
+            h *= 1099511628211ull;
+        }
+        return h;
+    }
+};
 
 /**
  * @brief The coordinates of the point (queried) and the value at that queried location
@@ -26,7 +41,7 @@ struct TreeNode {
     int split_value;
     TreeNode* left = nullptr;
     TreeNode* right = nullptr;
-    
+
     std::vector<Point> points;
 
     std::vector<int> min_bound;
@@ -82,11 +97,14 @@ struct Normalizer {
 class MLPModel : public Model {
 private:
     MLPNetwork net;
+    std::unordered_map<std::vector<int>, double, VecHash> value_cache;
     std::vector<Point> seenPoints;
     TreeNode* root = nullptr;
     Normalizer yNorm;
     int min_leaf_size = 3;
     int variance_threshold = 0.03;
+
+    std::random_device rd;
     
     TreeNode* find_leaf(TreeNode* node, const std::vector<int>& query);
 
@@ -105,6 +123,8 @@ private:
     double get_exploration_score(TreeNode* leaf);
 
     double predict_coordinate(const std::vector<int>& coordinate);
+
+    double leaf_nn_distance(TreeNode* leaf, const std::vector<int>& x);
 
     std::vector<double> normalize_input(const std::vector<int>& coords, int dimensionSize);
     double normalize_output(double value);
