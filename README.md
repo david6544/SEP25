@@ -6,6 +6,7 @@ COMP SCI - 3006 - Software Engineering Project
 This project uses CMake as its build system. The project structure includes:
 - `/src` - Source code files
 - `/test` - Unit tests using Google Test
+- `/performanceTester` - The Source files for integration testing models
 
 ### Prerequisites
 
@@ -67,6 +68,13 @@ Or use CTest for more detailed output:
 cd build
 ctest
 ```
+
+### Running the Performance Tests
+To test the performance of the model, go to `main.cpp` in  `/performanceTester`, edit the parameters and run
+```
+cmake --build build && ./build/sep25_performance
+```
+
 
 ### Development Workflow
 

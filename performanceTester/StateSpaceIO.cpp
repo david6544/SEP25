@@ -25,9 +25,6 @@ void StateSpaceIO::output_state(Model &model) {
     cout << "Performance Metrics:" << endl;
     cout << "-------------------" << endl;
     cout << "Percent Correct: " << results.percentCorrect() << "%" << endl;
-    cout << "Mean Absolute Error: " << results.meanAbsoluteError() << endl;
-    cout << "Root Mean Squared Error: " << results.rootMeanSquaredError() << endl;
-    cout << "Mean Predicted Value: " << results.meanPredicted() << endl;
     cout << "Actual Min/Max: [" << results.minActual << ", " << results.maxActual << "]" << endl;
     cout << "Predicted Min/Max: [" << results.minPredicted << ", " << results.maxPredicted << "]" << endl;
 }

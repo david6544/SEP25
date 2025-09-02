@@ -80,11 +80,16 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
     io->output_state(model);
 }
 
-
+/**
+ * This function is the main driver for performance testing, set the paramters below,
+ *  pick a function and either run a single test, or one with a variable number of query sizes
+ * 
+ *  Note: RunSeveral doens't output much inisghtful data just yet
+ */
 int main(void) {
 
-    int dimensions = 1, dimensionSize = 300, queries = 50;
-    auto func = testfunctions::griewank;
+    int dimensions = 2, dimensionSize = 600, queries = 6000;
+    auto func = testfunctions::rastrigin;
     //runSeveral(dimensions,dimensionSize, func);
     runSingle(dimensions, dimensionSize, queries, func);
 }

@@ -16,9 +16,9 @@ int FunctionSpace::get_dimension_size() const {
 }
 
 double FunctionSpace::get(const std::vector<int>& coords) const {
-    for (auto i : coords)
-        std::cout << i << " ";
-    std::cout << std::endl;
+    //for (auto i : coords)
+        //std::cout << i << " ";
+    //std::cout << std::endl;
     if (coords.size() != dimensions)
         throw std::out_of_range("query dimension size is out of range");
     
@@ -30,27 +30,30 @@ double FunctionSpace::get(const std::vector<int>& coords) const {
 }
 
 
+void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int index) {
+    std::cout << "\n";
 
-void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int dimension){
-    for (auto i : query)
-        std::cout << i << " ";
-    std::cout << std::endl;
+    std::cout << index << ": [";
+    for (int i = 0; i < query.size() - 1; i++) {
+        std::cout << query[i] << ", ";
+    }
+    std::cout << query[query.size()-1] << "] \n";
     
-    if (dimension == query.size()){
+    if (index == query.size()) {
         return;
     }
 
-    for (int i = 1; i < dimensionSize; i++){
-        query[dimension] = i;
+    for (int i = 1; i < dimensionSize; i++) {
+        query[index] = i;
 
         double actualResult = this->get(query);
         double predictedResult = model.get_value_at(query);
+        std::cout << "result: " << actualResult << " - predicted: " << predictedResult << "\n";
 
         this->results.updateResults(actualResult, predictedResult);
 
-        getResultsHelper(model, query, dimension+1);
+        getResultsHelper(model, query, index + 1);
     }
-    query[dimension] = 0;
     
     return;
 }
