@@ -84,8 +84,8 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
 
 
 int main(void) {
-    int dimensions = 1, dimensionSize = 1000, queries = 700;
-    auto func = testfunctions::sumpow;
+    int dimensions = 2, dimensionSize = 30, queries = 630;
+    auto func = testfunctions::griewank;
     //runSeveral(dimensions,dimensionSize, func);
     runSingle(dimensions, dimensionSize, queries, func);
 }

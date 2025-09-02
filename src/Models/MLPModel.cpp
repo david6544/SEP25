@@ -10,7 +10,7 @@
 
 MLPModel::MLPModel(int dimensions, int dimensionSize, int queries) 
     : Model(dimensions, dimensionSize, queries), 
-    net(MLPNetwork({dimensions, 32, 16, 1}, {tanh_act, tanh_act, ident})) {
+    net(MLPNetwork({dimensions, 64, 64, 1}, {tanh_act, tanh_act, ident})) {
     
 }
 
@@ -20,10 +20,11 @@ void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves
 
     if (node->is_leaf()) {
         // compute volume in 64-bit and guard against overflow
-        unsigned long long totalCoords = 1ULL;
+        uint64_t totalCoords = 1ULL;
         bool overflow = false;
         for (int i = 0; i < dimensions; ++i) {
-            unsigned long long span = (unsigned long long)(node->max_bound[i] - node->min_bound[i] + 1);
+            if (node->max_bound[i] < node->min_bound[i]) return; // invalid lead
+            uint64_t span = (uint64_t)(node->max_bound[i] - node->min_bound[i] + 1);
             if (span == 0) { overflow = true; break; }
             if (totalCoords > ULLONG_MAX / span) { overflow = true; break; }
             totalCoords *= span;
@@ -35,7 +36,7 @@ void MLPModel::get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves
                 leaves.push_back(node);
             }
         } else {
-            if ((unsigned long long)node->points.size() < totalCoords) {
+            if ((uint64_t)node->points.size() < totalCoords) {
                 leaves.push_back(node);
             }
         }
@@ -168,7 +169,7 @@ std::vector<int> MLPModel::get_random_candidate(TreeNode* leaf) {
             }
         }
         // pick midpoint, then clamp to the leaf bounds
-        long mid = ((long)left + (long)right) / 2;
+        uint64_t mid = ((uint64_t)left + (uint64_t)right) / 2;
         if (mid < leaf->min_bound[d]) mid = leaf->min_bound[d];
         if (mid > leaf->max_bound[d]) mid = leaf->max_bound[d];
         candidate[d] = (int)mid;
@@ -253,7 +254,7 @@ void MLPModel::update_prediction(const std::vector<int>& query, double result) {
     if (currentQuery >= (totalQueries * 0.1) * counter){
         counter++;
 
-        const int epochs = 60;
+        const int epochs = 128;
         const int batch  = 64;
 
         std::mt19937 g(rd());
