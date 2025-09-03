@@ -38,7 +38,7 @@ void CommandLineInputOutput::output_state(Model &model){
 
     long long maxIdx = 1;
     for (int i = 0; i < dimensions; ++i)
-        maxIdx *= dimensionSize; // safe integer exponentiation
+        maxIdx *= dimensionSize;
 
     for (long long i = 0; i < maxIdx; i++) {
         auto coords = index_to_coords(i, dimensions, dimensionSize);
