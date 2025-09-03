@@ -1,27 +1,8 @@
-#if defined(MLP) || defined(TESTING)
-#ifndef MLP_MODEL_H
-#define MLP_MODEL_H
-
-#include <limits>
-#include <cmath>
-#include <unordered_map>
-#include <random> 
+#if defined(KNN) || defined(TESTING)
+#ifndef KNN_MODEL_H
+#define KNN_MODEL_H
 
 #include "Model.hpp"
-#include "Tools/MLP.hpp"
-
-struct VecHash {
-    size_t operator()(const std::vector<int>& v) const noexcept {
-        // FNV-1a like mix
-        size_t h = 1469598103934665603ull;
-        for (int x : v) {
-            size_t y = static_cast<size_t>(x) + 0x9e3779b97f4a7c15ull;
-            h ^= y;
-            h *= 1099511628211ull;
-        }
-        return h;
-    }
-};
 
 /**
  * @brief The coordinates of the point (queried) and the value at that queried location
@@ -41,7 +22,7 @@ struct TreeNode {
     int split_value;
     TreeNode* left = nullptr;
     TreeNode* right = nullptr;
-
+    
     std::vector<Point> points;
 
     std::vector<int> min_bound;
@@ -58,53 +39,16 @@ struct TreeNode {
     }
 };
 
-struct RunningStats {
-    double mean = 0.0;
-    double m2   = 0.0;   // sum of squares of differences from the current mean
-    size_t n    = 0;
-
-    void push(double x) {
-        n++;
-        double delta = x - mean;
-        mean += delta / n;
-        double delta2 = x - mean;
-        m2 += delta * delta2;
-    }
-
-    double variance() const { return (n > 1) ? m2 / (n - 1) : 1.0; }
-    double stddev()   const { return std::sqrt(variance() + 1e-8); }
-};
-
-struct Normalizer {
-    RunningStats stats;
-
-    double normalize(double y) {
-        if (stats.n < 2) return y; // not enough data yet, pass through
-        return (y - stats.mean) / stats.stddev();
-    }
-
-    double denormalize(double y) {
-        if (stats.n < 2) return y; // not enough data yet, pass through
-        return y * stats.stddev() + stats.mean;
-    }
-};
-
 /**
  * @brief The DumbModel is merely for testing the client - It 
  * randomly picks query points and sets statespace[query point] = returned value
  * 
  */
-class MLPModel : public Model {
+class KnnModel : public Model {
 private:
-    MLPNetwork net;
-    std::unordered_map<std::vector<int>, double, VecHash> value_cache;
-    std::vector<Point> seenPoints;
     TreeNode* root = nullptr;
-    Normalizer yNorm;
     int min_leaf_size = 3;
     int variance_threshold = 0.03;
-
-    std::random_device rd;
     
     TreeNode* find_leaf(TreeNode* node, const std::vector<int>& query);
 
@@ -124,21 +68,17 @@ private:
 
     double predict_coordinate(const std::vector<int>& coordinate);
 
-    double leaf_nn_distance(TreeNode* leaf, const std::vector<int>& x);
-
-    std::vector<double> normalize_input(const std::vector<int>& coords, int dimensionSize);
-    double normalize_output(double value);
-    double denormalize_output(double value);
+    void updateStateSpace(std::vector<int>& coords, int idx);
 
 public:
     /**
-     * @brief Construct a new MLP Model object
+     * @brief Construct a new Knn Model object
      * 
      * @param dimensions The number of dimensions
      * @param dimensionSize The size of the dimensions
      * @param totalQueries The total number of queries available
      */
-    MLPModel(int dimensions, int dimensionSize, int totalQueries);
+    KnnModel(int dimensions, int dimensionSize, int totalQueries);
 
     /**
      * @brief Get the next query object
@@ -154,10 +94,8 @@ public:
      * @param result result returned from black box for our query
      */
     void update_prediction(const std::vector<int> &query, double result) override;
-
-    double get_value_at(const std::vector<int> &query) override;
 };
 
 
-#endif // MLP_MODEL_H
+#endif // KNN_MODEL_H
 #endif

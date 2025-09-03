@@ -1,12 +1,10 @@
+
 #if defined(LINEAR)
     #include "../src/Models/LinearModel.hpp"
     #define CurrentModel LinearModel
 #elif defined(DUMB)
     #include "../src/Models/DumbModel.hpp"
     #define CurrentModel DumbModel
-#elif defined(MLP)
-    #include "../src/Models/MLPModel.hpp"
-    #define CurrentModel MLPModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -60,7 +58,7 @@ void runSeveral(int dimensions, int dimensionSize, SpaceFunctionType func) {
             model.update_prediction(query, result);
         }
         results.emplace_back(fspace.getResults(model));
-        // io->output_state(model);
+        io->output_state(model);
     }
     output_performance(results);
 
@@ -84,7 +82,8 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
 
 
 int main(void) {
-    int dimensions = 2, dimensionSize = 30, queries = 630;
+
+    int dimensions = 1, dimensionSize = 300, queries = 50;
     auto func = testfunctions::griewank;
     //runSeveral(dimensions,dimensionSize, func);
     runSingle(dimensions, dimensionSize, queries, func);
