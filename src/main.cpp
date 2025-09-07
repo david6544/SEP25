@@ -8,9 +8,15 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(MLP)
+    #include "Models/MLPModel.hpp"
+    #define CurrentModel MLPModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
+
+#include <iostream>
+using namespace std;
 
 void algorithm(int dimensions, int dimensionSize, int totalQueries){
     InputOutput *io = InputOutput::get_instance();

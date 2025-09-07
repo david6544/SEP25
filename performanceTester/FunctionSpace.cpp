@@ -16,6 +16,7 @@ int FunctionSpace::get_dimension_size() const {
     return this->dimensionSize;
 }
 
+<<<<<<< HEAD
 double FunctionSpace::computeMeanHelper(std::vector<int>& query, int index, double& sum, int& count) const {
     if (index == query.size()) {
         sum += this->get(query);
@@ -41,6 +42,12 @@ double FunctionSpace::get(const std::vector<int>& coords) const {
     //for (auto i : coords)
         //std::cout << i << " ";
     //std::cout << std::endl;
+=======
+#include <iostream>
+using namespace std;
+
+double FunctionSpace::get(const std::vector<int>& coords) const {
+>>>>>>> origin/Model-28/KNN
     if (coords.size() != dimensions)
         throw std::out_of_range("query dimension size is out of range");
     

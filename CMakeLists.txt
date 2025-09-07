@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
-set(ALGORITHM "DUMB")
+set(ALGORITHM "MLP")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
@@ -77,7 +77,6 @@ message(STATUS "Selected algorithm: ${ALGORITHM}")
 target_compile_definitions(sep25_main PUBLIC ${ALGORITHM})
 
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
-include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
 set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT_HASH_SHORT}")
 
 # Add performance test executable

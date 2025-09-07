@@ -41,6 +41,6 @@ void CommandLineInputOutput::output_state(Model &model){
 
     int maxIdx = pow(dimensionSize, dimensions);
     for (int i = 0; i < maxIdx; i++) {
-        model.get_value_at(index_to_coords(i, dimensions, dimensionSize));
+        std::cout << model.get_value_at(index_to_coords(i, dimensions, dimensionSize)) << ((i == maxIdx-1) ? "\n" : " ");
     }
 }

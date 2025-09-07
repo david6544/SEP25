@@ -1,9 +1,12 @@
 # windows-toolchain.cmake
 set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_VERSION 1)
 
+# path to your cross compilers
 set(CMAKE_C_COMPILER   /usr/bin/x86_64-w64-mingw32-gcc)
 set(CMAKE_CXX_COMPILER /usr/bin/x86_64-w64-mingw32-g++)
 
+# where to search for libraries and includes (adjust to your sysroot)
 set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
