@@ -15,8 +15,66 @@
 
 #include <iostream>
 
+#include <iomanip>
+// Helper to run model on a given function and return Results and real mean
+struct PerfResult {
+    std::string name;
+    Results results;
+};
 
-//This is gpt'd lmao,
+PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunctionType func, const std::string& name) {
+    FunctionSpace fspace(dimensions, dimensionSize, func);
+    StateSpaceIO::set_IO(fspace);
+    InputOutput* io = InputOutput::get_instance();
+    CurrentModel model(dimensions, dimensionSize, queries);
+    for (int i = 0; i < queries; i++) {
+        std::vector<int> query = model.get_next_query();
+        double result = io->send_query_recieve_result(query);
+        model.update_prediction(query, result);
+    }
+    Results res = fspace.getResults(model);
+    return {name, res};
+}
+
+// Run model against all functions in testfunctions and output a table
+void runAllFunctions(int dimensions, int dimensionSize) {
+    struct FuncInfo {
+        SpaceFunctionType func;
+        std::string name;
+    };
+    std::vector<FuncInfo> funcs = {
+        {testfunctions::ackleyFunction, "Ackley"},
+        {testfunctions::sumpow, "SumPow"},
+        {testfunctions::griewank, "Griewank"},
+        {testfunctions::rastrigin, "Rastrigin"},
+        {testfunctions::michalewicz, "Michalewicz"}
+    };
+    std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "\nPerformance Table:\n";
+    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "| Function     |  Dim |  Size  | % Query | % Correct |  MAE      |  RMSE     |  Real Mean | Mean Predicted |\n";
+    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+    for (double percent : queryPercents) {
+        for (const auto& f : funcs) {
+            int totalArea = 1;
+            for (int d = 0; d < dimensions; ++d) totalArea *= dimensionSize;
+            int queries = std::max(1, static_cast<int>(totalArea * percent));
+            PerfResult r = runPerfTest(dimensions, dimensionSize, queries, f.func, f.name);
+            std::cout << "| " << std::setw(12) << r.name << " | "
+                      << std::setw(4) << dimensions << " | "
+                      << std::setw(5) << dimensionSize << " | "
+                      << std::setw(5) << std::fixed << std::setprecision(0) << percent * 100 << "% |" << std::fixed << std::setprecision(3)
+                      << std::setw(9) << r.results.percentCorrect() << " | "
+                      << std::setw(9) << r.results.meanAbsoluteError() << " | "
+                      << std::setw(9) << r.results.rootMeanSquaredError() << " | "
+                      << std::setw(10) << r.results.realMean << " | "
+                      << std::setw(11) << r.results.meanPredicted() << " |\n";
+        }
+    }
+    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+}
+
 void output_performance(std::vector<Results> results) {
     std::vector<double> errors;
     std::cout << "\n \n";
@@ -81,15 +139,12 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
 }
 
 /**
- * This function is the main driver for performance testing, set the paramters below,
- *  pick a function and either run a single test, or one with a variable number of query sizes
+ * This function is the main driver for performance testing, set the dimension size
+ * It will run your model against every function in the function suites, 
+ * along with a percentage of the queries of any given dimension size
  * 
- *  Note: RunSeveral doens't output much inisghtful data just yet
  */
 int main(void) {
-
-    int dimensions = 2, dimensionSize = 600, queries = 6000;
-    auto func = testfunctions::rastrigin;
-    //runSeveral(dimensions,dimensionSize, func);
-    runSingle(dimensions, dimensionSize, queries, func);
+    int dimensions = 2, dimensionSize = 1000;
+    runAllFunctions(dimensions, dimensionSize);
 }

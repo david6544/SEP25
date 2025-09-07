@@ -1,3 +1,4 @@
+
 #include "FunctionSpace.hpp"
 
 #include <exception>
@@ -15,6 +16,27 @@ int FunctionSpace::get_dimension_size() const {
     return this->dimensionSize;
 }
 
+double FunctionSpace::computeMeanHelper(std::vector<int>& query, int index, double& sum, int& count) const {
+    if (index == query.size()) {
+        sum += this->get(query);
+        count++;
+        return sum;
+    }
+    for (int i = 0; i < dimensionSize; i++) {
+        query[index] = i;
+        computeMeanHelper(query, index + 1, sum, count);
+    }
+    return sum;
+}
+
+double FunctionSpace::getRealMean() const {
+    std::vector<int> query(dimensions, 0);
+    double sum = 0.0;
+    int count = 0;
+    computeMeanHelper(query, 0, sum, count);
+    return count > 0 ? sum / count : 0.0;
+}
+
 double FunctionSpace::get(const std::vector<int>& coords) const {
     //for (auto i : coords)
         //std::cout << i << " ";
@@ -30,31 +52,30 @@ double FunctionSpace::get(const std::vector<int>& coords) const {
 }
 
 
+/**
+ * Helper to get results out of the model for each query
+ * Uncomment the lines below if you wish to see in-progress results
+ */
 void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int index) {
-    std::cout << "\n";
-
+    /* std::cout << "\n";
     std::cout << index << ": [";
     for (int i = 0; i < query.size() - 1; i++) {
         std::cout << query[i] << ", ";
     }
-    std::cout << query[query.size()-1] << "] \n";
-    
+    std::cout << query[query.size()-1] << "] \n"; */
     if (index == query.size()) {
         return;
     }
-
     for (int i = 1; i < dimensionSize; i++) {
         query[index] = i;
-
         double actualResult = this->get(query);
         double predictedResult = model.get_value_at(query);
+        /* 
         std::cout << "result: " << actualResult << " - predicted: " << predictedResult << "\n";
-
+        */
         this->results.updateResults(actualResult, predictedResult);
-
         getResultsHelper(model, query, index + 1);
     }
-    
     return;
 }
 
@@ -70,7 +91,8 @@ Results FunctionSpace::getResults(Model& model) {
 
     getResultsHelper(model, initialQuery, 0);
 
+    // Set realMean in results
+    this->results.realMean = getRealMean();
     this->allResults.push_back(this->results);
-    
     return this->results;
 }
