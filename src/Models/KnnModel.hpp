@@ -3,41 +3,7 @@
 #define KNN_MODEL_H
 
 #include "Model.hpp"
-
-/**
- * @brief The coordinates of the point (queried) and the value at that queried location
- * 
- */
-struct Point {
-    std::vector<int> coords; // coordinates in state space
-    double value;               // observed value (query result)
-};
-
-/**
- * @brief a KD tree node
- * 
- */
-struct TreeNode {
-    int split_dimension;
-    int split_value;
-    TreeNode* left = nullptr;
-    TreeNode* right = nullptr;
-    
-    std::vector<Point> points;
-
-    std::vector<int> min_bound;
-    std::vector<int> max_bound;
-    
-    /**
-     * @brief check whether node is a leaf node
-     * 
-     * @return true is a leaf node
-     * @return false is NOT a leaf node
-     */
-    bool is_leaf() const {
-        return left == nullptr && right == nullptr;
-    }
-};
+#include "Tools/KDTree.hpp"
 
 /**
  * @brief The DumbModel is merely for testing the client - It 
@@ -46,25 +12,10 @@ struct TreeNode {
  */
 class KnnModel : public Model {
 private:
-    TreeNode* root = nullptr;
+    TreeNode* root;
     int min_leaf_size = 3;
     int variance_threshold = 0.03;
     
-    TreeNode* find_leaf(TreeNode* node, const std::vector<int>& query);
-
-    void insert_point(TreeNode* node, const std::vector<int>& query, double result);
-
-    TreeNode* build_tree(std::vector<Point>& data, const std::vector<int>& min_bound,const std::vector<int>& max_bound);
-
-    double get_variance(std::vector<Point>& data);
-
-    void get_explore_leaves(TreeNode* node, std::vector<TreeNode*>& leaves);
-
-    std::vector<int> get_random_candidate(TreeNode* node);
-    
-    double get_exploitation_score(TreeNode* leaf);
-
-    double get_exploration_score(TreeNode* leaf);
 
     double predict_coordinate(const std::vector<int>& coordinate);
 
@@ -94,6 +45,8 @@ public:
      * @param result result returned from black box for our query
      */
     void update_prediction(const std::vector<int> &query, double result) override;
+
+    double get_value_at(const std::vector<int> &query) override;
 };
 
 
