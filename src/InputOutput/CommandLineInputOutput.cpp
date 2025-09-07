@@ -40,8 +40,11 @@ void CommandLineInputOutput::output_state(Model &model){
     for (int i = 0; i < dimensions; ++i)
         maxIdx *= dimensionSize;
 
+    auto coords = index_to_coords(0, dimensions, dimensionSize);
+    std::cout << model.get_value_at(coords);
     for (long long i = 0; i < maxIdx; i++) {
-        auto coords = index_to_coords(i, dimensions, dimensionSize);
-        std::cout << model.get_value_at(coords) << ((i == maxIdx-1) ? "\n" : " ");
+        coords = index_to_coords(i, dimensions, dimensionSize);
+        std::cout << " " << model.get_value_at(coords);
     }
+    std::cout << std::endl;
 }
