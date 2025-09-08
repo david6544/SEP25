@@ -1,4 +1,6 @@
 #include <vector>
+#include <string>
+#include <iostream>
 
 #include "InputOutput/CommandLineInputOutput.hpp"
 
@@ -8,6 +10,9 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(RBF)
+    #include "Models/RBFModel.hpp"
+    #define CurrentModel RbfModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -25,6 +30,21 @@ void algorithm(int dimensions, int dimensionSize, int totalQueries){
     io->output_state(model);
 }
 
+void rbfAlgorithm(int dimensions, int dimensionSize, int queries){
+    InputOutput *io = InputOutput::get_instance();
+
+
+    for (int i = 0; i < queries; i++){
+        std::vector<int> query = model.get_next_query();
+        double result = io->send_query_recieve_result(query);
+        model.update_prediction(query, result);
+    }
+    model.update_prediction_final(); 
+    const auto raw_state = model.get_state_space();
+    io->output_state(raw_state);
+}
+
+// --- Main ---
 int main(int argc, char* argv[]) {
     if (argc != 4) { // program name + 3 integers
         std::cerr << "Usage: " << argv[0] << " Dimensions : int,  Array size : int,  Maximum number of totalQueries : int\n";
