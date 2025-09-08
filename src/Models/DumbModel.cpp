@@ -1,14 +1,14 @@
-#if defined(DUMB) || defined(TESTING)
 /**
- * @file DumbModel.cpp
- * @author Cuinn Kemp
- * @brief This file implements a simple model that randomly selects query points
- * @version 0.1
- * @date 2025-08-27
- * 
- * @copyright Copyright (c) 2025
- * 
- */
+* @file DumbModel.cpp
+* @author Cuinn Kemp
+* @brief This file implements a simple model that randomly selects query points
+* @version 0.1
+* @date 2025-08-27
+* 
+* @copyright Copyright (c) 2025
+* 
+*/
+#if defined(DUMB) || defined(TESTING)
 #include <vector>
 #include <random>
 #include <ctime>
