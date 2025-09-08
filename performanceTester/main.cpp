@@ -5,6 +5,9 @@
 #elif defined(DUMB)
     #include "../src/Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(RBF)
+    #include "../src/Models/RBFModel.hpp"
+    #define CurrentModel RBFModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -16,13 +19,16 @@
 #include <iostream>
 
 #include <iomanip>
+#include <chrono>
 // Helper to run model on a given function and return Results and real mean
 struct PerfResult {
     std::string name;
     Results results;
+    double timeTaken;
 };
 
 PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunctionType func, const std::string& name) {
+    auto start = std::chrono::high_resolution_clock::now();
     FunctionSpace fspace(dimensions, dimensionSize, func);
     StateSpaceIO::set_IO(fspace);
     InputOutput* io = InputOutput::get_instance();
@@ -33,7 +39,9 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunc
         model.update_prediction(query, result);
     }
     Results res = fspace.getResults(model);
-    return {name, res};
+    auto end = std::chrono::high_resolution_clock::now();
+    double timeTaken = std::chrono::duration<double>(end - start).count();
+    return {name, res, timeTaken};
 }
 
 // Run model against all functions in testfunctions and output a table
@@ -52,9 +60,9 @@ void runAllFunctions(int dimensions, int dimensionSize) {
     std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
     std::cout << std::fixed << std::setprecision(3);
     std::cout << "\nPerformance Table:\n";
-    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
-    std::cout << "| Function     |  Dim |  Size  | % Query | % Correct |  MAE      |  RMSE     |  Real Mean | Mean Predicted |\n";
-    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "------------------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "| Function     |  Dim |  Size  | % Query | % Correct |  MAE      |  RMSE     |  Real Mean | Mean Predicted | Time (s) |\n";
+    std::cout << "------------------------------------------------------------------------------------------------------------------------\n";
     for (double percent : queryPercents) {
         for (const auto& f : funcs) {
             int totalArea = 1;
@@ -69,7 +77,8 @@ void runAllFunctions(int dimensions, int dimensionSize) {
                       << std::setw(9) << r.results.meanAbsoluteError() << " | "
                       << std::setw(9) << r.results.rootMeanSquaredError() << " | "
                       << std::setw(10) << r.results.realMean << " | "
-                      << std::setw(11) << r.results.meanPredicted() << " |\n";
+                      << std::setw(11) << r.results.meanPredicted() << " | "
+                      << std::setw(9) << r.timeTaken << " |\n";
         }
     }
     std::cout << "-------------------------------------------------------------------------------------------------------------\n";
@@ -145,6 +154,6 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
  * 
  */
 int main(void) {
-    int dimensions = 2, dimensionSize = 1000;
+    int dimensions = 3, dimensionSize = 10;
     runAllFunctions(dimensions, dimensionSize);
 }
