@@ -5,7 +5,7 @@ This diagram shows the core domain types and how they interact. It’s kept in s
 ```mermaid
 %% Rendered by GitHub Mermaid
 %% Layout hint
-%%{init: {'flowchart': {'diagramPadding': 8}} }%%
+%%{init: {'flowchart': {'diagramPadding': 8} {'defaultRenderer': 'elk'}} }%%
 
 classDiagram
 direction TB
@@ -51,8 +51,16 @@ class LinearModel {
   + find_prev_nonzero_afterzero_ix(ix: double) : int
 }
 
+class RBFModel {
+  <<to be implemented>>
+}
+
 class PlaceholderModelN {
   <<to be implemented/extended>>
+}
+
+class EnsembleModel {
+  <<to be implemented>>
 }
 
 %% ===== IO Abstraction =====
@@ -84,7 +92,13 @@ Model o-- StateSpace
 Model --> DebuggerLogger : logs metrics/steps
 DumbModel ..|> Model
 LinearModel ..|> Model
+RBFModel ..|> Model
 PlaceholderModelN ..|> Model
+EnsembleModel ..|> Model
+DumbModel ..|> EnsembleModel
+LinearModel ..|> EnsembleModel
+RBFModel ..|> EnsembleModel
+PlaceholderModelN ..|> EnsembleModel
 CommandLineInputOutput ..|> InputOutput
 InputOutput ..> StateSpace : uses
 
