@@ -42,7 +42,7 @@ void CommandLineInputOutput::output_state(Model &model){
 
     auto coords = index_to_coords(0, dimensions, dimensionSize);
     std::cout << model.get_value_at(coords);
-    for (long long i = 0; i < maxIdx; i++) {
+    for (long long i = 1; i < maxIdx; i++) {
         coords = index_to_coords(i, dimensions, dimensionSize);
         std::cout << " " << model.get_value_at(coords);
     }
