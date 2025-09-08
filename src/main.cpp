@@ -8,6 +8,9 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(RBF)
+    #include "Models/RBFModel.hpp"
+    #define CurrentModel RBFModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
