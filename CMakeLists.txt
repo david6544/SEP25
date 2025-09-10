@@ -124,12 +124,17 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/docs/Doxyfile)
     set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/docs)
 
-    add_custom_target(doc ALL
+    add_custom_target(doc
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_IN}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM
     )
+
+    # Make documentation a dependency of all main targets
+    add_dependencies(sep25_main doc)
+    add_dependencies(sep25_performance doc)
+    add_dependencies(sep25_tests doc)
 
 else()
     message(WARNING "Doxygen not found. Documentation target will be unavailable.")
