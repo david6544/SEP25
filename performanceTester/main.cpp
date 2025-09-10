@@ -23,10 +23,14 @@ struct PerfResult {
 };
 
 PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunctionType func, const std::string& name) {
+    
     FunctionSpace fspace(dimensions, dimensionSize, func);
+    
     StateSpaceIO::set_IO(fspace);
     InputOutput* io = InputOutput::get_instance();
+
     CurrentModel model(dimensions, dimensionSize, queries);
+
     for (int i = 0; i < queries; i++) {
         std::vector<int> query = model.get_next_query();
         double result = io->send_query_recieve_result(query);
@@ -146,5 +150,6 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
  */
 int main(void) {
     int dimensions = 2, dimensionSize = 1000;
+    testfunctions::dimSize = dimensionSize;
     runAllFunctions(dimensions, dimensionSize);
 }
