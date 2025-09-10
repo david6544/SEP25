@@ -1,4 +1,3 @@
-
 #if defined(LINEAR)
     #include "../src/Models/LinearModel.hpp"
     #define CurrentModel LinearModel
@@ -16,11 +15,12 @@
 #include <iostream>
 
 #include <iomanip>
-// Helper to run model on a given function and return Results and real mean
+#include <map>
 struct PerfResult {
     std::string name;
     Results results;
 };
+
 
 PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunctionType func, const std::string& name) {
     
@@ -45,38 +45,74 @@ void runAllFunctions(int dimensions, int dimensionSize) {
     struct FuncInfo {
         SpaceFunctionType func;
         std::string name;
+        std::string category;
     };
     std::vector<FuncInfo> funcs = {
-        {testfunctions::ackleyFunction, "Ackley"},
-        {testfunctions::sumpow, "SumPow"},
-        {testfunctions::griewank, "Griewank"},
-        {testfunctions::rastrigin, "Rastrigin"},
-        {testfunctions::michalewicz, "Michalewicz"}
+        {testfunctions::ackleyFunction, "Ackley", "Many Local Minima"},
+        {testfunctions::sumpow, "SumPow", "Bowl Shaped"},
+        {testfunctions::griewank, "Griewank", "Many Local Minima"},
+        {testfunctions::rastrigin, "Rastrigin", "Many Local Minima"},
+        {testfunctions::michalewicz, "Michalewicz", "Steep Ridges/Drops"},
+        {testfunctions::powerSum, "PowerSum", "Plate Function"},
+        {testfunctions::zakharov, "Zakharov", "Plate Function"},
+        {testfunctions::dixonPrice, "DixonPrice", "Valley Function"},
+        {testfunctions::rosenbrock, "Rosenbrock", "Valley Function"},
+        {testfunctions::hyperEllipsoid, "HyperEllipsoid", "Bowl Function"}
     };
     std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
     std::cout << std::fixed << std::setprecision(3);
     std::cout << "\nPerformance Table:\n";
-    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
-    std::cout << "| Function     |  Dim |  Size  | % Query | % Correct |  MAE      |  RMSE     |  Real Mean | Mean Predicted |\n";
-    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "------------------------------------------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "| Function         | Category            |  Dim |  Size |  % Query | % Correct |    MAE       |     RMSE     |    Real Mean  |  Mean Predicted |\n";
+    std::cout << "------------------------------------------------------------------------------------------------------------------------------------------------\n";
+    // Store results for summary
+    struct StatRow {
+        std::string category;
+        double percentCorrect = 0.0;
+        double mae = 0.0;
+        double rmse = 0.0;
+        int count = 0;
+    };
+    std::map<std::string, StatRow> stats;
     for (double percent : queryPercents) {
         for (const auto& f : funcs) {
             int totalArea = 1;
             for (int d = 0; d < dimensions; ++d) totalArea *= dimensionSize;
             int queries = std::max(1, static_cast<int>(totalArea * percent));
             PerfResult r = runPerfTest(dimensions, dimensionSize, queries, f.func, f.name);
-            std::cout << "| " << std::setw(12) << r.name << " | "
+            std::cout << "| " << std::setw(16) << f.name << " | "
+                      << std::setw(19) << f.category << " | "
                       << std::setw(4) << dimensions << " | "
                       << std::setw(5) << dimensionSize << " | "
-                      << std::setw(5) << std::fixed << std::setprecision(0) << percent * 100 << "% |" << std::fixed << std::setprecision(3)
-                      << std::setw(9) << r.results.percentCorrect() << " | "
-                      << std::setw(9) << r.results.meanAbsoluteError() << " | "
-                      << std::setw(9) << r.results.rootMeanSquaredError() << " | "
-                      << std::setw(10) << r.results.realMean << " | "
-                      << std::setw(11) << r.results.meanPredicted() << " |\n";
+                      << std::setw(7) << std::fixed << std::setprecision(0) << percent * 100 << "% |" << std::fixed << std::setprecision(3)
+                      << std::setw(10) << r.results.percentCorrect() << " | "
+                      << std::setw(12) << r.results.meanAbsoluteError() << " | "
+                      << std::setw(12) << r.results.rootMeanSquaredError() << " | "
+                      << std::setw(14) << r.results.realMean << " | "
+                      << std::setw(14) << r.results.meanPredicted() << " |\n";
+            // Collect stats
+            auto& stat = stats[f.category];
+            stat.category = f.category;
+            stat.percentCorrect += r.results.percentCorrect();
+            stat.mae += r.results.meanAbsoluteError();
+            stat.rmse += r.results.rootMeanSquaredError();
+            stat.count++;
         }
     }
-    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+
+    std::cout << "------------------------------------------------------------------------------------------------------------------------------------------------\n";
+    // Print summary table
+    std::cout << "\nModel Performance by Function Category:\n";
+    std::cout << "-----------------------------------------------------------------\n";
+    std::cout << "| Category            | Avg % Correct |  Avg MAE   |  Avg RMSE  |\n";
+    std::cout << "-----------------------------------------------------------------\n";
+    for (const auto& [cat, stat] : stats) {
+        std::cout << "| " << std::setw(19) << cat << " | "
+                  << std::setw(13) << std::fixed << std::setprecision(3) << (stat.count ? stat.percentCorrect/stat.count : 0.0) << " | "
+                  << std::setw(10) << (stat.count ? stat.mae/stat.count : 0.0) << " | "
+                  << std::setw(10) << (stat.count ? stat.rmse/stat.count : 0.0) << " |\n";
+    }
+    std::cout << "-----------------------------------------------------------------\n";
 }
 
 void output_performance(std::vector<Results> results) {
@@ -149,7 +185,7 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
  * 
  */
 int main(void) {
-    int dimensions = 2, dimensionSize = 1000;
+    int dimensions = 2, dimensionSize = 100;
     testfunctions::dimSize = dimensionSize;
     runAllFunctions(dimensions, dimensionSize);
 }

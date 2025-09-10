@@ -117,4 +117,110 @@ double michalewicz(const std::vector<int>& query) {
     return std::abs(sumTerm);
 }
 
+// Power Sum Function
+// Category: Plate Function
+// Evaluated on hypercube x_i ∈ [0, n], 
+// Dimensions: n
+// https://www.sfu.ca/~ssurjano/powersum.html
+double powerSum(const std::vector<int>& query) {
+    double d = query.size();
+    
+    double finalTerm = 0.0;
+
+    std::vector<int> b = {0,8,18,44,114,223,556,1243};
+
+    for (int j = 1; j <= query.size(); j++) {
+        double sumTerm = 0.0;
+        for (int i = 1; i <= query.size(); i++) {
+            double xd = testfunctions::translateIntoHypercube(query[i-1], 0, d);
+            sumTerm += pow(xd, j);
+        }
+        sumTerm -= b[j-1];
+        finalTerm += pow(sumTerm,2);
+    }
+    return finalTerm;
+}
+
+
+// Zakharov Function
+// Category: Plate Function
+// Evaluated on hypercube x_i ∈ [-5,10] 
+// Dimensions: n
+// https://www.sfu.ca/~ssurjano/zakharov.html
+double zakharov(const std::vector<int>& query) {
+
+    double d = query.size();
+    
+    double sumTerm1 = 0.0;
+    double sumTerm2 = 0.0;
+    double sumTerm3 = 0.0;
+
+    for (int i = 1; i <= query.size(); i++) {
+        double xd = testfunctions::translateIntoHypercube(query[i-1], -5, 10);
+        sumTerm1 += pow(xd,2);
+        sumTerm2 += 0.5 * i * xd;
+        sumTerm3 += 0.5 * i * xd;
+    }
+    return sumTerm1 + pow(sumTerm2,2) + pow(sumTerm3, 4);
+}
+
+
+// Dixon-Price Function
+// Category: Valley Function
+// Evaluated on hypercube x_i ∈ [-10,10] 
+// Dimensions: n
+// https://www.sfu.ca/~ssurjano/dixonpr.html
+double dixonPrice(const std::vector<int>& query) {
+
+    double d = query.size();
+    
+    double sumTerm = 0.0;
+    double initalTerm = pow(query[0] - 1, 2);
+
+
+    for (int i = 2; i <= query.size(); i++) {
+        double xd = testfunctions::translateIntoHypercube(query[i-1], -10, 10);
+        double xdPrior = testfunctions::translateIntoHypercube(query[i-2], -10, 10);
+        sumTerm += i * pow((2 * pow(xd,2) - xdPrior),2);
+    }
+    return initalTerm + sumTerm;
+}
+
+
+
+// Rosenbrock Function
+// Category: Valley Function
+// Evaluated on hypercube x_i ∈ [-5,10] 
+// Dimensions: n
+// https://www.sfu.ca/~ssurjano/rosen.html
+double rosenbrock(const std::vector<int>& query) {
+    
+    double sumTerm1 = 0.0;
+
+    for (int i = 1; i < query.size(); i++) {
+        double xd = testfunctions::translateIntoHypercube(query[i-1], -5, 10);
+        double xdPost = testfunctions::translateIntoHypercube(query[i], -5, 10);
+        sumTerm1 += 100 * pow(xdPost - pow(xd,2), 2) + pow(xd - 1, 2);
+    }
+    return sumTerm1;
+}
+
+
+// Rotated Hyper Ellispoid Function
+// Category: Bowl Function
+// Evaluated on hypercube x_i ∈ [-65.536,65.536] 
+// Dimensions: n
+// https://www.sfu.ca/~ssurjano/rothyp.html
+double hyperEllipsoid(const std::vector<int>& query) {
+    
+    double sumTerm = 0.0;
+
+    for (int i = 0; i < query.size(); i++) {
+        for (int j = 0; j < i; j++) {
+            sumTerm += pow(query[j],2);
+        }
+    }
+
+    return sumTerm;
+}
 }
