@@ -16,6 +16,7 @@
 
 #include <iomanip>
 #include <map>
+#include <chrono>
 struct PerfResult {
     std::string name;
     Results results;
@@ -62,9 +63,9 @@ void runAllFunctions(int dimensions, int dimensionSize) {
     std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
     std::cout << std::fixed << std::setprecision(3);
     std::cout << "\nPerformance Table:\n";
-    std::cout << "------------------------------------------------------------------------------------------------------------------------------------------------\n";
-    std::cout << "| Function         | Category            |  Dim |  Size |  % Query | % Correct |    MAE       |     RMSE     |    Real Mean  |  Mean Predicted |\n";
-    std::cout << "------------------------------------------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "| Function         | Category            |  Dim |  Size |  % Query | % Correct |    MAE       |     RMSE     |    Real Mean  |  Mean Predicted | Duration (s) |\n";
+    std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
     // Store results for summary
     struct StatRow {
         std::string category;
@@ -74,12 +75,16 @@ void runAllFunctions(int dimensions, int dimensionSize) {
         int count = 0;
     };
     std::map<std::string, StatRow> stats;
+    #include <chrono>
     for (double percent : queryPercents) {
         for (const auto& f : funcs) {
             int totalArea = 1;
             for (int d = 0; d < dimensions; ++d) totalArea *= dimensionSize;
             int queries = std::max(1, static_cast<int>(totalArea * percent));
+            auto start = std::chrono::high_resolution_clock::now();
             PerfResult r = runPerfTest(dimensions, dimensionSize, queries, f.func, f.name);
+            auto end = std::chrono::high_resolution_clock::now();
+            double duration = std::chrono::duration<double>(end - start).count();
             std::cout << "| " << std::setw(16) << f.name << " | "
                       << std::setw(19) << f.category << " | "
                       << std::setw(4) << dimensions << " | "
@@ -89,7 +94,8 @@ void runAllFunctions(int dimensions, int dimensionSize) {
                       << std::setw(12) << r.results.meanAbsoluteError() << " | "
                       << std::setw(12) << r.results.rootMeanSquaredError() << " | "
                       << std::setw(14) << r.results.realMean << " | "
-                      << std::setw(14) << r.results.meanPredicted() << " |\n";
+                      << std::setw(14) << r.results.meanPredicted() << " | "
+                      << std::setw(12) << std::fixed << std::setprecision(3) << duration << " |\n";
             // Collect stats
             auto& stat = stats[f.category];
             stat.category = f.category;
@@ -100,7 +106,7 @@ void runAllFunctions(int dimensions, int dimensionSize) {
         }
     }
 
-    std::cout << "------------------------------------------------------------------------------------------------------------------------------------------------\n";
+    std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
     // Print summary table
     std::cout << "\nModel Performance by Function Category:\n";
     std::cout << "-----------------------------------------------------------------\n";
