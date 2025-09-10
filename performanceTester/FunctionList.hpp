@@ -24,8 +24,6 @@ double translateIntoHypercube(int x, double lowerBound, double upperBound) {
 // https://www.sfu.ca/~ssurjano/ackley.html
 double ackleyFunction(const std::vector<int>& query){
 
-
-
     const double a = 20.0;
     const double b = 0.2;
     const double c = 2 * M_PI;
@@ -37,8 +35,8 @@ double ackleyFunction(const std::vector<int>& query){
     double sumSquares = 0.0;
     double sumCos = 0.0;
 
-    for (int i = 0; i < query.size(); ++i) {
-        double xd = testfunctions::translateIntoHypercube(query[i], -32.768, 32.768);
+    for (auto& x : query) {
+        double xd = testfunctions::translateIntoHypercube(x, -32.768, 32.768);
         sumSquares += xd * xd;
         sumCos += cos(c * xd);
     }
