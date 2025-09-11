@@ -15,9 +15,16 @@ This project uses CMake as its build system. The project structure includes:
 
 ### MinGW Installation
 1. Install MinGW:
+
+Linux/Ubuntu:
 ```bash
 sudo apt update
 sudo apt install mingw-w64
+```
+
+For Mac using Homebrew
+```bash
+brew install mingw-w64
 ```
 
 2. Validate Installation:
