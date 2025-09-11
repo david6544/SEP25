@@ -3,8 +3,8 @@ project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
 # set(ALGORITHM "DUMB")
-set(ALGORITHM "LINEAR")
-# set(ALGORITHM "RBF")
+# set(ALGORITHM "LINEAR")
+set(ALGORITHM "RBF")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
