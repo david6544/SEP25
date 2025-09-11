@@ -4,6 +4,9 @@
 #include "../src/InputOutput/InputOutput.hpp"
 #include "FunctionSpace.hpp"
 
+/**
+ * IO implementation for model performance testing, inherits from InputOutput
+ */
 class StateSpaceIO : public InputOutput {
 private:
     static FunctionSpace *stateSpace;

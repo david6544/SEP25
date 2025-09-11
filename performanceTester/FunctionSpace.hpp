@@ -23,9 +23,8 @@ typedef struct Results {
     double maxActual = std::numeric_limits<double>::lowest();
     double minPredicted = std::numeric_limits<double>::max();
     double maxPredicted = std::numeric_limits<double>::lowest();
-
+    double realMean = 0.0;
     void updateResults(double actual, double predicted){
-        using namespace std;
         totalSeen++;
         if (predicted >= actual * 0.99 && predicted <= actual * 1.01){
             this->correct++;
@@ -34,11 +33,11 @@ typedef struct Results {
         sumAbsoluteError += error;
         sumSquaredError += pow(error, 2);
 
-        minActual = min(minActual, actual);
-        maxActual = max(maxActual, actual);
+        minActual = std::min(minActual, actual);
+        maxActual = std::max(maxActual, actual);
 
-        minPredicted = min(minPredicted, predicted);
-        maxPredicted = max(maxPredicted, predicted);
+        minPredicted = std::min(minPredicted, predicted);
+        maxPredicted = std::max(maxPredicted, predicted);
 
         predictedResultSum += predicted;
     }
@@ -67,6 +66,7 @@ private:
     std::vector<Results> allResults;
     
     void getResultsHelper(Model& model, std::vector<int>& query, int dimension);
+    double computeMeanHelper(std::vector<int>& query, int index, double& sum, int& count) const;
 public:
     FunctionSpace(int dimensions, int dimensionSize, SpaceFunctionType spaceFunction);
 
@@ -78,6 +78,8 @@ public:
 
     Results getResults(Model& model);
     std::vector<Results> getAllResults(){ return allResults; };
+
+    double getRealMean() const;
 };
 
 
