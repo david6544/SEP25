@@ -1,8 +1,12 @@
 # windows-toolchain.cmake
 set(CMAKE_SYSTEM_NAME Windows)
 
-set(CMAKE_C_COMPILER   /usr/bin/x86_64-w64-mingw32-gcc)
-set(CMAKE_CXX_COMPILER /usr/bin/x86_64-w64-mingw32-g++)
+# set(CMAKE_C_COMPILER   /usr/bin/x86_64-w64-mingw32-gcc)
+# set(CMAKE_CXX_COMPILER /usr/bin/x86_64-w64-mingw32-g++)
+
+# For wingw instaleld by homebrew on macOS
+set(CMAKE_C_COMPILER   /opt/homebrew/opt/mingw-w64/bin/x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER /opt/homebrew/opt/mingw-w64/bin/x86_64-w64-mingw32-g++)
 
 set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
 

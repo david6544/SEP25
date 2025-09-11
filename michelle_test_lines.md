@@ -29,3 +29,7 @@ seq 0.1 0.1 7.0 | ./build/sep25_main_dev 2 10 70
 
 ⚡ Tip: `seq start step end` generates floats easily.
 So `seq 0.1 0.1 7.0` → `0.1, 0.2, 0.3 … 7.0` (exactly 70 numbers).
+
+```bash
+mkdir -p build && cd build && cmake .. && cmake --build . && cd ..
+```
