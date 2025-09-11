@@ -69,7 +69,7 @@ void runAllFunctions(int dimensions, int dimensionSize) {
     // Store results for summary
     struct StatRow {
         std::string category;
-        double percentCorrect = 0.0;
+        std::vector<double> percentCorrects;
         double mae = 0.0;
         double rmse = 0.0;
         int count = 0;
@@ -99,7 +99,7 @@ void runAllFunctions(int dimensions, int dimensionSize) {
             // Collect stats
             auto& stat = stats[f.category];
             stat.category = f.category;
-            stat.percentCorrect += r.results.percentCorrect();
+            stat.percentCorrects.push_back(r.results.percentCorrect());
             stat.mae += r.results.meanAbsoluteError();
             stat.rmse += r.results.rootMeanSquaredError();
             stat.count++;
@@ -108,17 +108,27 @@ void runAllFunctions(int dimensions, int dimensionSize) {
 
     std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
     // Print summary table
-    std::cout << "\nModel Performance by Function Category:\n";
-    std::cout << "-----------------------------------------------------------------\n";
-    std::cout << "| Category            | Avg % Correct |  Avg MAE   |  Avg RMSE  |\n";
-    std::cout << "-----------------------------------------------------------------\n";
+    std::cout << "\nModel Performance by Function Category and Query Size:\n";
+    std::cout << "-----------------------------------------------------------------------------------------------\n";
+    std::cout << "| Category            | 10% Query Space | 25% Query Space | 50% Query Space | 75% Query Space |\n";
+    std::cout << "-----------------------------------------------------------------------------------------------\n";
     for (const auto& [cat, stat] : stats) {
-        std::cout << "| " << std::setw(19) << cat << " | "
-                  << std::setw(13) << std::fixed << std::setprecision(3) << (stat.count ? stat.percentCorrect/stat.count : 0.0) << " | "
-                  << std::setw(10) << (stat.count ? stat.mae/stat.count : 0.0) << " | "
-                  << std::setw(10) << (stat.count ? stat.rmse/stat.count : 0.0) << " |\n";
+        std::cout << "| " << std::setw(19) << cat << " | ";
+        for (size_t i = 0; i < 4; ++i) {
+            double avg = 0.0;
+            int n = stat.percentCorrects.size() / 4;
+            if (n > 0) {
+                double sum = 0.0;
+                for (size_t j = i; j < stat.percentCorrects.size(); j += 4) {
+                    sum += stat.percentCorrects[j];
+                }
+                avg = sum / n;
+            }
+            std::cout << std::setw(15) << std::fixed << std::setprecision(3) << avg << " | ";
+        }
+        std::cout << "\n";
     }
-    std::cout << "-----------------------------------------------------------------\n";
+    std::cout << "-----------------------------------------------------------------------------------------------\n";
 }
 
 void output_performance(std::vector<Results> results) {
