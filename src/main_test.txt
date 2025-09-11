@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>  // <-- for logging
 
 #include "InputOutput/CommandLineInputOutput.hpp"
 
@@ -18,14 +19,27 @@
 void algorithm(int dimensions, int dimensionSize, int totalQueries){
     InputOutput *io = InputOutput::get_instance();
 
+    std::cerr << "[LOG] Initializing model..." << std::endl;
     CurrentModel model(dimensions, dimensionSize, totalQueries);
+    std::cerr << "[LOG] Model initialized." << std::endl;
 
     for (int i = 0; i < totalQueries; i++){
+        std::cerr << "[LOG] Iteration " << i+1 << "/" << totalQueries << ": Getting next query..." << std::endl;
         std::vector<int> query = model.get_next_query();
+        std::cerr << "[LOG] Got query of size " << query.size() << std::endl;
+
+        std::cerr << "[LOG] Sending query to IO..." << std::endl;
         double result = io->send_query_recieve_result(query);
+        std::cerr << "[LOG] Got result = " << result << std::endl;
+
+        std::cerr << "[LOG] Updating prediction..." << std::endl;
         model.update_prediction(query, result);
+        std::cerr << "[LOG] Update done." << std::endl;
     }
+
+    std::cerr << "[LOG] Outputting final state..." << std::endl;
     io->output_state(model);
+    std::cerr << "[LOG] Finished algorithm." << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -38,9 +52,16 @@ int main(int argc, char* argv[]) {
     int dimensionSize = std::atoi(argv[2]);
     int totalQueries = std::atoi(argv[3]);
 
+    std::cerr << "[LOG] Parsed arguments: dimensions=" 
+              << dimensions << ", dimensionSize=" 
+              << dimensionSize << ", totalQueries=" 
+              << totalQueries << std::endl;
+
     CommandLineInputOutput::set_IO();
+    std::cerr << "[LOG] IO initialized." << std::endl;
 
     algorithm(dimensions, dimensionSize, totalQueries);
 
+    std::cerr << "[LOG] Program finished successfully." << std::endl;
     return 0;
 }
