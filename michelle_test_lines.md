@@ -33,3 +33,7 @@ So `seq 0.1 0.1 7.0` → `0.1, 0.2, 0.3 … 7.0` (exactly 70 numbers).
 ```bash
 mkdir -p build && cd build && cmake .. && cmake --build . && cd ..
 ```
+
+```bash
+rm -rf build-windows && cmake -B build-windows -S . -DCMAKE_TOOLCHAIN_FILE=windows-toolchain.cmake -DCMAKE_BUILD_TYPE=Release &&  cmake --build build-windows
+```
