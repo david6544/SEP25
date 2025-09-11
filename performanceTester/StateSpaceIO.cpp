@@ -67,7 +67,11 @@ void StateSpaceIO::output_state(Model &model) {
         out.close();
     } 
 
-    std::ofstream out(queriesFile, std::ios::app);
+    if (std::filesystem::exists(queriesFile)) {
+        std::filesystem::remove(queriesFile); // delete old file
+    }
+
+    std::ofstream out(queriesFile);
     if (!out.is_open()) {
         throw std::runtime_error("Failed to open " + queriesFile);
     }
