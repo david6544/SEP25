@@ -73,7 +73,6 @@ std::vector<int> RBFModel::get_next_query() {
 void RBFModel::update_prediction(const std::vector<int> &query, double result) {
     m_data.emplace_back(query, result);
     stateSpace->set(query, result);
-
     if (currentQuery == totalQueries)
         update_prediction_final();
 }
