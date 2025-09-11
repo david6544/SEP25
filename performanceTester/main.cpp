@@ -4,6 +4,9 @@
 #elif defined(DUMB)
     #include "../src/Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(GEK)
+    #include "../src/Models/GEKModel.hpp"
+    #define CurrentModel GEKModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -201,7 +204,7 @@ void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType
  * 
  */
 int main(void) {
-    int dimensions = 2, dimensionSize = 100;
+    int dimensions = 2, dimensionSize = 30;
     testfunctions::dimSize = dimensionSize;
     runAllFunctions(dimensions, dimensionSize);
 }

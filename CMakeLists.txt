@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
-set(ALGORITHM "DUMB")
+set(ALGORITHM "GEK")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
@@ -78,6 +78,7 @@ target_compile_definitions(sep25_main PUBLIC ${ALGORITHM})
 
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
 include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
+include_directories(${eigen_SOURCE_DIR})
 set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT_HASH_SHORT}")
 
 # Add performance test executable
@@ -85,6 +86,7 @@ file(GLOB PERFORMANCE_FILES performanceTester/*.cpp)
 add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
 target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
 target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM})
+include_directories(${eigen_SOURCE_DIR})
 
 # GoogleTest setup (unchanged)
 include(FetchContent)
@@ -96,10 +98,19 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# Eigen for linear algebra
+FetchContent_Declare(
+  eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG 3.4.0
+)
+FetchContent_MakeAvailable(eigen)
+
 enable_testing()
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
 target_compile_definitions(sep25_tests PUBLIC "TESTING")
+include_directories(${eigen_SOURCE_DIR})
 
 # Link GoogleTest
 target_link_libraries(sep25_tests 
