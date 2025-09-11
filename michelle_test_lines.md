@@ -7,7 +7,7 @@ seq 0.1 0.1 0.7 | ./build/sep25_main_dev 1 10 7
 ```
 
 ```bash
-seq 0.1 0.1 0.7 | ./build-windows/sep25_main_fa2f6d3.exe 1 10 7
+seq 0.1 0.1 0.7 | wine ./build-windows/sep25_main_659ccf5.exe 1 10 7
 ```
 
 ### 2. **1-D, 100 elements, 70 queries**
