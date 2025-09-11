@@ -23,11 +23,11 @@ struct PerfResult {
 };
 
 
-PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunctionType func, const std::string& name) {
+PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace, int queries, SpaceFunctionType func, const std::string& name) {
     
     FunctionSpace fspace(dimensions, dimensionSize, func);
     
-    StateSpaceIO::set_IO(fspace);
+    StateSpaceIO::set_IO(fspace, name, queries);
     InputOutput* io = InputOutput::get_instance();
 
     CurrentModel model(dimensions, dimensionSize, queries);
@@ -37,12 +37,15 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, int queries, SpaceFunc
         double result = io->send_query_recieve_result(query);
         model.update_prediction(query, result);
     }
+    if (outputStateSpace){
+        io->output_state(model);
+    }
     Results res = fspace.getResults(model);
     return {name, res};
 }
 
 // Run model against all functions in testfunctions and output a table
-void runAllFunctions(int dimensions, int dimensionSize) {
+void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace) {
     struct FuncInfo {
         SpaceFunctionType func;
         std::string name;
@@ -82,7 +85,7 @@ void runAllFunctions(int dimensions, int dimensionSize) {
             for (int d = 0; d < dimensions; ++d) totalArea *= dimensionSize;
             int queries = std::max(1, static_cast<int>(totalArea * percent));
             auto start = std::chrono::high_resolution_clock::now();
-            PerfResult r = runPerfTest(dimensions, dimensionSize, queries, f.func, f.name);
+            PerfResult r = runPerfTest(dimensions, dimensionSize, outputStateSpace, queries, f.func, f.name);
             auto end = std::chrono::high_resolution_clock::now();
             double duration = std::chrono::duration<double>(end - start).count();
             std::cout << "| " << std::setw(16) << f.name << " | "
@@ -131,77 +134,31 @@ void runAllFunctions(int dimensions, int dimensionSize) {
     std::cout << "-----------------------------------------------------------------------------------------------\n";
 }
 
-void output_performance(std::vector<Results> results) {
-    std::vector<double> errors;
-    std::cout << "\n \n";
-
-    for (const auto& res : results) {
-        // Use mean absolute error as a representative error for each Results
-        errors.push_back(res.meanAbsoluteError());
-    }
-    if (errors.empty()) {
-        std::cout << "No error data available." << std::endl;
-        return;
-    }
-    std::sort(errors.begin(), errors.end());
-    double median;
-    size_t n = errors.size();
-    if (n % 2 == 0) {
-        median = (errors[n/2 - 1] + errors[n/2]) / 2.0;
-    } else {
-        median = errors[n/2];
-    }
-    std::cout << "Median of mean absolute errors: " << median << std::endl;
-}
-
-void runSeveral(int dimensions, int dimensionSize, SpaceFunctionType func) {
-    std::vector<double> querySizes = {0.10, 0.25, 0.50, 0.75};
-    std::vector<Results> results;
-    for (auto size: querySizes) {
-        int queryCount = dimensionSize / size;
-        
-        FunctionSpace fspace(dimensions, dimensionSize, func);
-        StateSpaceIO::set_IO(fspace);
-        InputOutput* io = InputOutput::get_instance();
-        
-        CurrentModel model(dimensions, dimensionSize, queryCount);
-        
-        for (int i = 0; i < queryCount; i++){
-            std::vector<int> query = model.get_next_query();
-            double result = io->send_query_recieve_result(query);
-            model.update_prediction(query, result);
-        }
-        results.emplace_back(fspace.getResults(model));
-        io->output_state(model);
-    }
-    output_performance(results);
-
-}
-
-void runSingle(int dimensions, int dimensionSize, int queries, SpaceFunctionType func) {
-    
-    FunctionSpace fspace(dimensions, dimensionSize, func);
-    StateSpaceIO::set_IO(fspace);
-    InputOutput* io = InputOutput::get_instance();
-    
-    CurrentModel model(dimensions, dimensionSize, queries);
-    
-    for (int i = 0; i < queries; i++){
-        std::vector<int> query = model.get_next_query();
-        double result = io->send_query_recieve_result(query);
-        model.update_prediction(query, result);
-    }
-    io->output_state(model);
-}
-
 /**
  * This function is the main driver for performance testing, set the dimension size
  * It will run your model against every function in the function suites, 
  * along with a percentage of the queries of any given dimension size
  * 
  */
-int main(void) {
-    int dimensions = 2, dimensionSize = 100;
+int main(int argc, char* argv[]) {
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] 
+                  << " <dimensions> <dimensionSize> [outputStateSpace]\n";
+        return 1;
+    }
+
+    int dimensions = std::atoi(argv[1]);
+    int dimensionSize = std::atoi(argv[2]);
+
     testfunctions::dimSize = dimensionSize;
-    runAllFunctions(dimensions, dimensionSize);
+
+    bool outputStateSpace = false;
+    if (argc >= 4) {
+        std::string opt = argv[3];
+        if (opt == "1" || opt == "true" || opt == "yes") {
+            outputStateSpace = true;
+        }
+    }
+    testfunctions::dimSize = dimensionSize;
+    runAllFunctions(dimensions, dimensionSize, outputStateSpace);
 }

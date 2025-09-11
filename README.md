@@ -72,7 +72,7 @@ ctest
 ### Running the Performance Tests
 To test the performance of the model, go to `main.cpp` in  `/performanceTester`, edit the parameters and run
 ```
-cmake --build build && ./build/sep25_performance
+cmake --build build && ./build/sep25_performance {dimensions} {dimensionSize} [outputToFile (default false)]
 ```
 
 
