@@ -4,7 +4,7 @@ from matplotlib.widgets import Slider
 
 # create a random dataset
 n = 500   
-d = 1
+d = 3
 data = np.random.rand(n, d + 1)
 
 x_inputs = data[:, :d]   
@@ -48,15 +48,18 @@ elif d == 2:
     ax.set_ylabel("Y")
     ax.set_title("2D n Elements")
 
-#else:  # three or more input dimensions
-#    ax = fig.add_subplot(111, projection= "3d" )
-#    sc = ax.scatter(x_inputs[mask, 0], x_inputs[mask, 1], x_inputs[mask, 2], 
-#                    c=y_output[mask], cmap=colour_map)
-#    ax.set_xlabel("X1")
-#    ax.set_ylabel("X2")
-#    ax.set_zlabel("X3")
-#    ax.set_title(f"{d} dimensional state space (output is colour)")
-#    plt.colorbar(sc, ax=ax, label="Output")
+elif d == 3:  
+    ax = fig.add_subplot(111, projection= "3d" )
+    sc = ax.scatter(x_inputs[mask, 0], x_inputs[mask, 1], x_inputs[mask, 2], 
+                    c=y_output[mask], cmap=colour_map)
+    ax.set_xlabel("X1")
+    ax.set_ylabel("X2")
+    ax.set_zlabel("X3")
+    ax.set_title(f"{d} dimensional state space (output is colour)")
+    plt.colorbar(sc, ax=ax, label="Output")
+
+else:
+    print("Invalid dimension size")
 
 
 # make sliders for every input dimension beyond the first three
