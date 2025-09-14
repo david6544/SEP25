@@ -12,7 +12,7 @@ int dimSize = 0;
    
 double translateIntoHypercube(int x, double lowerBound, double upperBound) {
     double scale = (upperBound - lowerBound) / (dimSize - 1);
-    return x * scale;
+    return lowerBound + x * scale;
 }
 
 
