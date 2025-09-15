@@ -121,15 +121,15 @@ endif()
 find_package(Doxygen QUIET)
 
 if(DOXYGEN_FOUND)
-    # Input Doxyfile is in docs/
-    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile)
+    set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/docs/Doxyfile)
+    set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/docs)
 
-    add_custom_target(doc_doxygen ALL
+    add_custom_target(docs
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_IN}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs
         COMMENT "Generating API documentation with Doxygen"
         VERBATIM
     )
 else()
-    message(WARNING "Doxygen not found. Documentation target will be unavailable.")
+    message(WARNING "Doxygen not found. 'docs' target will be unavailable.")
 endif()
