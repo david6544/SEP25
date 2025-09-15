@@ -83,3 +83,8 @@ For development, you can use the following commands:
    ```bash
    cmake --build build && ./build/sep25_tests
    ```
+
+3. Update Documents:
+   ```bash
+   cmake --build . --target docs
+   ```
