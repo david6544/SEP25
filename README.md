@@ -84,7 +84,9 @@ For development, you can use the following commands:
    cmake --build build && ./build/sep25_tests
    ```
 
-3. Update Documents:
+3. Using Doxygen:
    ```bash
+   sudo apt install doxygen
+   cd build
    cmake --build . --target docs
    ```
