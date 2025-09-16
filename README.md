@@ -84,7 +84,10 @@ For development, you can use the following commands:
    cmake --build build && ./build/sep25_tests
    ```
 
-3. Using Doxygen:
+
+### Documentation Instructions
+
+For creating local documentation, please use the following commands once you have a working local build:
    ```bash
    sudo apt install doxygen
    cd build
