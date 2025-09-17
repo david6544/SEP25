@@ -93,3 +93,4 @@ For creating local documentation, please use the following commands once you hav
    cd build
    cmake --build . --target docs
    ```
+To open the documentation, navigate to the index.html file and open it locally on your browser.
