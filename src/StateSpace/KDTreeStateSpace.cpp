@@ -40,7 +40,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     TreeNode* node, const std::vector<int>& coords, double value, int depth) 
 {
     int axis = depth % this->dimensions;
-
+    // It may also be beneficial here to do depth limit and bucketing.
     if (!node) {
         return new TreeNode(coords, value, axis);
     }
