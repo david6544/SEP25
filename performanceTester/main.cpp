@@ -4,6 +4,12 @@
 #elif defined(DUMB)
     #include "../src/Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(BOO)
+    #include "../src/Models/BBOptimizer.hpp"
+    #define CurrentModel BBOptimizer
+#elif defined(OneD)
+    #include "../src/Models/OneDModel.hpp"
+    #define CurrentModel OneDModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -29,12 +35,13 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
     
     StateSpaceIO::set_IO(fspace, name, queries);
     InputOutput* io = InputOutput::get_instance();
-
+    
     CurrentModel model(dimensions, dimensionSize, queries);
 
     for (int i = 0; i < queries; i++) {
         std::vector<int> query = model.get_next_query();
         double result = io->send_query_recieve_result(query);
+
         model.update_prediction(query, result);
     }
     if (outputStateSpace){

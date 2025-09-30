@@ -1,5 +1,5 @@
 #include <vector>
-
+#include <iostream>
 #include "InputOutput/CommandLineInputOutput.hpp"
 
 #if defined(LINEAR)
@@ -8,6 +8,12 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(BOO)
+    #include "../src/Models/BBOptimizer.hpp"
+    #define CurrentModel BBOptimizer
+#elif defined(OneD)
+    #include "../src/Models/OneDModel.hpp"
+    #define CurrentModel OneDModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
