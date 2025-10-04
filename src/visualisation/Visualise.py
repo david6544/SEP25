@@ -1,14 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-
+import dataInput as i
+ 
 # create a random dataset
-n = 500   
-d = 3
-data = np.random.rand(n, d + 1)
+#n = 500   
+#d = 3
+#data = np.random.rand(n, d + 1)
 
-x_inputs = data[:, :d]   
-y_output = data[:, d]    
+#x_inputs = data[:, :d]   
+#y_output = data[:, d]   
+
+# get data
+d = 3
+x_inputs, y_output = i.load_data("/home/archi/SEP25/Ackley-1000.txt", d)
+n, d = x_inputs.shape
+
 
 # choose a colour map for showing the output
 colour_map = plt.cm.Greys
@@ -96,4 +103,6 @@ else:
 #    s.on_changed(updatePlot)
 
 # show the finished plot
-plt.show()
+#plt.show()
+
+plt.savefig("output.png")
