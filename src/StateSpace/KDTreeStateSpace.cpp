@@ -2,7 +2,14 @@
 
 // Constructor
 KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)
-    : StateSpace(dimensions, dimensionSize), root(nullptr) {}
+    : StateSpace(dimensions, dimensionSize), root(nullptr) {
+        // Weigh max depth by number of dimensions and dimension size.
+
+
+        // Can also just choose a fixed max depth. This is a heuristic.
+        // Setting maxDepth to -1 means no limit.
+        this->maxDepth = static_cast<int>(std::log2(dimensionSize)) * dimensions;
+    }
 
 // Destructor
 KDTreeStateSpace::~KDTreeStateSpace() {
@@ -12,10 +19,17 @@ KDTreeStateSpace::~KDTreeStateSpace() {
 // Recursively free nodes
 void KDTreeStateSpace::destroy(TreeNode* node) {
     if (!node) return;
+
+    // Recursively free all bucketed children
+    for (auto* child : node->bucket) {
+        destroy(child);
+    }
+
     destroy(node->left);
     destroy(node->right);
     delete node;
 }
+
 
 // Dimensions accessors
 int KDTreeStateSpace::get_dimensions() const {
@@ -45,6 +59,17 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
         return new TreeNode(coords, value, axis);
     }
 
+
+    if (maxDepth >= 0 && depth >= maxDepth) {
+        if (!node->isBucket) {
+            node->isBucket = true;
+        }
+        TreeNode* newNode = new TreeNode(coords, value, depth % dimensions);
+        node->bucket.push_back(newNode);
+        return node;
+    }
+
+
     if (coords == node->coords) {
         // If point already exists, update its value
         node->value = value;
@@ -66,16 +91,20 @@ double KDTreeStateSpace::get(const std::vector<int>& coords) const {
 }
 
 // Recursive search
-double KDTreeStateSpace::get_recursive(
-    TreeNode* node, const std::vector<int>& coords, int depth) const 
-{
-    if (!node) {
-        throw std::out_of_range("Coordinates not found in KDTree");
+double KDTreeStateSpace::get_recursive(TreeNode* node, const std::vector<int>& coords, int depth) const {
+    if (!node) throw std::out_of_range("Coordinates not found in KDTree");
+
+    // If this is a bucket node, check all children
+    if (node->isBucket) {
+        for (auto* child : node->bucket) {
+            if (child->coords == coords) {
+                return child->value;
+            }
+        }
+        throw std::out_of_range("Coordinates not found in bucket");
     }
 
-    if (coords == node->coords) {
-        return node->value;
-    }
+    if (coords == node->coords) return node->value;
 
     int axis = depth % dimensions;
     if (coords[axis] < node->coords[axis]) {
@@ -84,6 +113,7 @@ double KDTreeStateSpace::get_recursive(
         return get_recursive(node->right, coords, depth + 1);
     }
 }
+
 
 KDTreeStateSpace::TreeNode* KDTreeStateSpace::get_root() {
     return this->root;
@@ -130,7 +160,20 @@ void KDTreeStateSpace::nearest_recursive(TreeNode* node,
                                          double& best_dist) const {
     if (!node) return;
 
-    // Compute distance to this node
+    // Check all bucketed children if bucket node
+    if (node->isBucket) {
+        for (auto* child : node->bucket) {
+            double dist = squared_distance(target, child->coords);
+            if (dist < best_dist) {
+                best_dist = dist;
+                best_coords = child->coords;
+                best_value = child->value;
+            }
+        }
+        return;
+    }
+
+    // Normal node
     double dist = squared_distance(target, node->coords);
     if (dist < best_dist) {
         best_dist = dist;
@@ -139,15 +182,11 @@ void KDTreeStateSpace::nearest_recursive(TreeNode* node,
     }
 
     int axis = depth % dimensions;
-
-    // Choose branch
     TreeNode* near = (target[axis] < node->coords[axis]) ? node->left : node->right;
     TreeNode* far  = (target[axis] < node->coords[axis]) ? node->right : node->left;
 
-    // Search nearer side first
     nearest_recursive(near, target, depth + 1, best_coords, best_value, best_dist);
 
-    // Check if we need to explore the other side
     double diff = static_cast<double>(target[axis] - node->coords[axis]);
     if (diff * diff < best_dist) {
         nearest_recursive(far, target, depth + 1, best_coords, best_value, best_dist);

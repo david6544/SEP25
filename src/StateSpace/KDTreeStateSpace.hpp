@@ -15,11 +15,16 @@ private:
         TreeNode* left;
         TreeNode* right;
 
+        std::vector<TreeNode*> bucket; // optional for bucket nodes
+        bool isBucket;
+
         TreeNode(const std::vector<int>& c, double v, int a)
-            : coords(c), value(v), axis(a), left(nullptr), right(nullptr) {}
+            : coords(c), value(v), axis(a), left(nullptr), right(nullptr), isBucket(false) {}
     };
 
+
     TreeNode* root;
+    int maxDepth = -1; // No limit by default
 
     // Helpers
     TreeNode* insert_recursive(TreeNode* node, const std::vector<int>& coords, double value, int depth);
