@@ -8,6 +8,10 @@ KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)
 
         // Can also just choose a fixed max depth. This is a heuristic.
         // Setting maxDepth to -1 means no limit.
+        int totalPoints = 1;
+        for (int d = 0; d < dimensions; ++d)
+            totalPoints *= dimensionSize;
+
         this->maxDepth = static_cast<int>(std::ceil(std::log2(totalPoints))) * 1.2; // 20% deeper
 
         std::cout << "KDTree max depth set to " << this->maxDepth << "\n";
