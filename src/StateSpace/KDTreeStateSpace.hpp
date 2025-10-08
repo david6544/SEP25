@@ -18,6 +18,9 @@ private:
         // For locality calculations
         int visitCount = 0;    // How many times queries have been made near this node
         double totalError = 0.0; // Cumulative prediction error at this location
+        // For variance computation
+        double meanValue = 0.0;   // running mean of observed values
+        double M2 = 0.0;          // sum of squared deviations from mean (Welford)
         //
         std::vector<TreeNode*> bucket; // optional for bucket nodes
         bool isBucket;

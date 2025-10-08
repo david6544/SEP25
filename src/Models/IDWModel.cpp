@@ -15,7 +15,6 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(
 }
 
 double IDWModel::predictValueAt(const std::vector<int>& query) {
-    // Get nearest nodes or bucket
     auto neighbors = stateSpace->nearest_neighbor(query);
     if (neighbors.empty()) return 0.0;
 
@@ -26,17 +25,19 @@ double IDWModel::predictValueAt(const std::vector<int>& query) {
     for (auto* node : neighbors) {
         double dist2 = stateSpace->squared_distance(query, node->coords);
         double dist = std::sqrt(dist2 + epsilon);
+        double w = 1.0 / dist; // basic inverse distance
 
-        // Basic inverse distance weight
-        double w = 1.0 / dist;
-
-        // Adjust for exploration (less explored → higher weight)
+        // Exploration factor (less visited → higher weight)
         double explorationFactor = 1.0 / (1.0 + node->visitCount);
 
-        // Adjust for accuracy (more error → lower confidence)
+        // Accuracy factor (high error → lower weight)
         double accuracyFactor = 1.0 / (1.0 + node->totalError);
 
-        double combinedWeight = w * explorationFactor * accuracyFactor;
+        // Uncertainty factor (high variance → lower weight)
+        double variance = (node->visitCount > 1) ? node->M2 / (node->visitCount - 1) : 0.0;
+        double uncertaintyFactor = 1.0 / (1.0 + variance);
+
+        double combinedWeight = w * explorationFactor * accuracyFactor * uncertaintyFactor;
 
         weightedSum += combinedWeight * node->value;
         weightTotal += combinedWeight;
@@ -44,6 +45,7 @@ double IDWModel::predictValueAt(const std::vector<int>& query) {
 
     return (weightTotal > 0.0) ? weightedSum / weightTotal : 0.0;
 }
+
 
 
 
@@ -143,16 +145,24 @@ void IDWModel::update_prediction(const std::vector<int>& query, double result) {
     double predicted = predictValueAt(query);
     double error = std::abs(predicted - result);
 
-    // Store the actual value
+    // Insert or update the actual value
     stateSpace->insert(query, result);
 
-    // Update local exploration and error stats
+    // Update neighbors with variance info
     auto neighbors = stateSpace->nearest_neighbor(query);
     for (auto* node : neighbors) {
         node->visitCount += 1;
+
+        // Welford's online algorithm for variance
+        double delta = result - node->meanValue;
+        node->meanValue += delta / node->visitCount;
+        double delta2 = result - node->meanValue;
+        node->M2 += delta * delta2;
+
         node->totalError += error;
     }
 }
+
 
 
 

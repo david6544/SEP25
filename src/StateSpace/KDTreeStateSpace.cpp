@@ -62,6 +62,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
 
     if (maxDepth >= 0 && depth >= maxDepth) {
         // Check if point already exists in bucket
+        std::cout << "Max depth reached, inserting into bucket\n";
         for (auto* child : node->bucket) {
             if (child->coords == coords) {
                 child->value = value;
