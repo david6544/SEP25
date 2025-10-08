@@ -3,6 +3,9 @@
 
 #include <vector>
 #include <iostream>
+#include <queue>
+#include <cmath>
+#include <limits>
 
 #include "StateSpace.hpp"
 
@@ -44,6 +47,18 @@ private:
                                          int depth,
                                          TreeNode*& bestNode,
                                          double& bestDist) const;
+
+    void nearest_recursive_k(
+                        TreeNode* node,
+                        const std::vector<int>& target,
+                        int depth,
+                        int k,
+                        std::priority_queue<
+                            std::pair<double, TreeNode*>,
+                            std::vector<std::pair<double, TreeNode*>>,
+                            std::less<std::pair<double, TreeNode*>>
+                        >& bestNeighbors
+                    ) const;
     
 
 public:
@@ -59,6 +74,7 @@ public:
 
     TreeNode* get_root();
     std::vector<KDTreeStateSpace::TreeNode*> nearest_neighbor(const std::vector<int>& coords) const;
+    std::vector<KDTreeStateSpace::TreeNode*> nearest_k_neighbors(const std::vector<int>& coords, int k) const;
 
     double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
 };

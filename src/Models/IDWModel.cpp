@@ -15,15 +15,15 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(
 }
 
 double IDWModel::predictValueAt(const std::vector<int>& query) {
-    auto neighbors = stateSpace->nearest_neighbor(query);
+    auto neighbors = stateSpace->nearest_k_neighbors(query, 10);
     if (neighbors.empty()) return 0.0;
 
     double weightedSum = 0.0;
     double weightTotal = 0.0;
     const double epsilon = 1e-9;
 
-    std::cout << neighbors.size() << " neighbors found for prediction at ";
-    
+    std::cout << neighbors.size() << " neighbors found for prediction at " << hash_coords(query) << "\n";
+
     for (auto* node : neighbors) {
         double dist2 = stateSpace->squared_distance(query, node->coords);
         double dist = std::sqrt(dist2 + epsilon);
