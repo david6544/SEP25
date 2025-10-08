@@ -4,6 +4,9 @@
 #elif defined(DUMB)
     #include "../src/Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(IDW)
+    #include "../src/Models/IDWModel.hpp"
+    #define CurrentModel IDWModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
