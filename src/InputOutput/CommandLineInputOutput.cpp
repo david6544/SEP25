@@ -29,18 +29,6 @@ double CommandLineInputOutput::send_query_recieve_result(const std::vector<int> 
     return result;
 }
 
-std::vector<int> index_to_coords(int index, int dimensions, int dimensionSize) {
-    std::vector<int> coords(dimensions);
-    for (int d = dimensions - 1; d >= 0; --d) {
-        coords[d] = index % dimensionSize;
-        index /= dimensionSize;
-    }
-    if (index != 0) {
-        throw std::out_of_range("index too large for given dimensions");
-    }
-    return coords;
-}
-
 void CommandLineInputOutput::output_state(Model &model){
     int dimensions = model.get_dimensions();
     int dimensionSize = model.get_dimensionSize();
@@ -51,7 +39,7 @@ void CommandLineInputOutput::output_state(Model &model){
 
     auto coords = index_to_coords(0, dimensions, dimensionSize);
     std::cout << model.get_value_at(coords);
-    for (long long i = 0; i < maxIdx; i++) {
+    for (long long i = 1; i < maxIdx; i++) {
         coords = index_to_coords(i, dimensions, dimensionSize);
         std::cout << " " << model.get_value_at(coords);
     }

@@ -6,6 +6,9 @@ CMakeCache.txt
 CMakeFiles/
 /docs/
 
+# Performance Data
+/PerformanceData*
+
 # Compiled files
 *.o
 *.a
