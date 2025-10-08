@@ -150,4 +150,3 @@ void LinearModel::update_prediction(const std::vector<int> &query, double result
 }
 
 #endif // LINEAR || TESTING
-
