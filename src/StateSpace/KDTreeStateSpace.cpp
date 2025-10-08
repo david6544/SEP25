@@ -14,7 +14,7 @@ KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)
 
         this->maxDepth = static_cast<int>(std::ceil(std::log2(totalPoints))) * 4; // 400% deeper
 
-        std::cout << "KDTree max depth set to " << this->maxDepth << "\n";
+        // std::cout << "KDTree max depth set to " << this->maxDepth << "\n";
     }
 
 // Destructor
