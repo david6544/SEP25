@@ -1,5 +1,6 @@
 #if defined(IDW) || defined(TESTING)
 #include "IDWModel.hpp"
+#include <functional>
 
 // Helper to hash coordinates for visited set
 std::string hash_coords(const std::vector<int>& coords) {
