@@ -95,8 +95,15 @@ double KDTreeStateSpace::get(const std::vector<int>& coords) const {
     if (coords.size() != static_cast<size_t>(dimensions)) {
         throw std::invalid_argument("Coordinate dimensionality mismatch");
     }
-    return get_recursive(root, coords, 0);
+
+    try {
+        return get_recursive(root, coords, 0);
+    } catch (std::out_of_range&) {
+        // Return default value if not present
+        return 0.0;
+    }
 }
+
 
 // Recursive search
 double KDTreeStateSpace::get_recursive(TreeNode* node, const std::vector<int>& coords, int depth) const {
