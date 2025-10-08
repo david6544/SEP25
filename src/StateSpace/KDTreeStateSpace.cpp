@@ -63,6 +63,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     if (maxDepth >= 0 && depth >= maxDepth) {
         if (!node->isBucket) {
             node->isBucket = true;
+            node->bucket.push_back(node); // Add current node to bucket
         }
         TreeNode* newNode = new TreeNode(coords, value, depth % dimensions);
         node->bucket.push_back(newNode);
@@ -132,63 +133,61 @@ double KDTreeStateSpace::squared_distance(const std::vector<int>& a,
 }
 
 // Public entry point
-std::pair<std::vector<int>, double> 
+std::vector<KDTreeStateSpace::TreeNode*> 
 KDTreeStateSpace::nearest_neighbor(const std::vector<int>& coords) const {
     if (coords.size() != static_cast<size_t>(dimensions)) {
         throw std::invalid_argument("Coordinate dimensionality mismatch");
     }
 
-    std::vector<int> best_coords;
-    double best_value = 0.0;
-    double best_dist = std::numeric_limits<double>::max();
+    TreeNode* nearestNode = nullptr;
+    double bestDist = std::numeric_limits<double>::max();
 
-    nearest_recursive(root, coords, 0, best_coords, best_value, best_dist);
+    nearest_recursive(root, coords, 0, nearestNode, bestDist);
 
-    if (best_coords.empty()) {
+    if (!nearestNode) {
         throw std::out_of_range("KDTree is empty");
     }
 
-    return {best_coords, best_value};
+    // If nearest node is a bucket container, return all nodes in the bucket
+    if (nearestNode->isBucket) {
+        return nearestNode->bucket;
+    }
+
+    // Otherwise return a single-node vector
+    return { nearestNode };
 }
+
 
 // Recursive nearest search
 void KDTreeStateSpace::nearest_recursive(TreeNode* node,
                                          const std::vector<int>& target,
                                          int depth,
-                                         std::vector<int>& best_coords,
-                                         double& best_value,
-                                         double& best_dist) const {
+                                         TreeNode*& bestNode,
+                                         double& bestDist) const {
     if (!node) return;
 
-    // Check all bucketed children if bucket node
+    // If this node is a bucket container, stop here — this bucket is the closest
     if (node->isBucket) {
-        for (auto* child : node->bucket) {
-            double dist = squared_distance(target, child->coords);
-            if (dist < best_dist) {
-                best_dist = dist;
-                best_coords = child->coords;
-                best_value = child->value;
-            }
-        }
+        bestNode = node;
+        bestDist = 0.0; // treat bucket as zero distance (closest granularity)
         return;
     }
 
-    // Normal node
     double dist = squared_distance(target, node->coords);
-    if (dist < best_dist) {
-        best_dist = dist;
-        best_coords = node->coords;
-        best_value = node->value;
+    if (dist < bestDist) {
+        bestDist = dist;
+        bestNode = node;
     }
 
     int axis = depth % dimensions;
     TreeNode* near = (target[axis] < node->coords[axis]) ? node->left : node->right;
     TreeNode* far  = (target[axis] < node->coords[axis]) ? node->right : node->left;
 
-    nearest_recursive(near, target, depth + 1, best_coords, best_value, best_dist);
+    // Explore near side first
+    nearest_recursive(near, target, depth + 1, bestNode, bestDist);
 
     double diff = static_cast<double>(target[axis] - node->coords[axis]);
-    if (diff * diff < best_dist) {
-        nearest_recursive(far, target, depth + 1, best_coords, best_value, best_dist);
+    if (diff * diff < bestDist) {
+        nearest_recursive(far, target, depth + 1, bestNode, bestDist);
     }
 }

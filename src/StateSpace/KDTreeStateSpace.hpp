@@ -15,6 +15,10 @@ private:
         TreeNode* left;
         TreeNode* right;
 
+        // For locality calculations
+        int visitCount = 0;    // How many times queries have been made near this node
+        double totalError = 0.0; // Cumulative prediction error at this location
+        //
         std::vector<TreeNode*> bucket; // optional for bucket nodes
         bool isBucket;
 
@@ -30,8 +34,12 @@ private:
     TreeNode* insert_recursive(TreeNode* node, const std::vector<int>& coords, double value, int depth);
     double get_recursive(TreeNode* node, const std::vector<int>& coords, int depth) const;
     void destroy(TreeNode* node);
-    void nearest_recursive(TreeNode* node, const std::vector<int>& target, int depth, std::vector<int>& best_coords, double& best_value, double& best_dist) const;
-    double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
+    void KDTreeStateSpace::nearest_recursive(TreeNode* node,
+                                         const std::vector<int>& target,
+                                         int depth,
+                                         TreeNode*& bestNode,
+                                         double& bestDist) const;
+    
 
 public:
     KDTreeStateSpace(int dimensions, int dimensionSize);
@@ -45,7 +53,9 @@ public:
     double insert(const std::vector<int>& coords, double value);
 
     TreeNode* get_root();
-    std::pair<std::vector<int>, double> nearest_neighbor(const std::vector<int>& coords) const;
+    std::vector<KDTreeStateSpace::TreeNode*> nearest_neighbor(const std::vector<int>& coords) const;
+
+    double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
 };
 
 #endif // KD_TREE_STATE_SPACE
