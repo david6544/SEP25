@@ -4,6 +4,7 @@
 
 #include "Model.hpp"
 #include "../StateSpace/KDTreeStateSpace.hpp"
+#include <unordered_set>
 
 /**
  * @brief IDWModel implements Inverse Distance Weighting interpolation using a KD-Tree for spatial indexing.
