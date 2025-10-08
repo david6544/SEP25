@@ -5,6 +5,9 @@ _deps/
 CMakeCache.txt
 CMakeFiles/
 
+# Performance Data
+/PerformanceData*
+
 # Compiled files
 *.o
 *.a
