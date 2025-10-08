@@ -34,7 +34,7 @@ private:
     TreeNode* insert_recursive(TreeNode* node, const std::vector<int>& coords, double value, int depth);
     double get_recursive(TreeNode* node, const std::vector<int>& coords, int depth) const;
     void destroy(TreeNode* node);
-    void KDTreeStateSpace::nearest_recursive(TreeNode* node,
+    void nearest_recursive(TreeNode* node,
                                          const std::vector<int>& target,
                                          int depth,
                                          TreeNode*& bestNode,
