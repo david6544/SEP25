@@ -56,7 +56,6 @@ double KDTreeStateSpace::insert(const std::vector<int>& coords, double value) {
 }
 
 // Recursive insert
-int depthReached = 1;
 KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     TreeNode* node, const std::vector<int>& coords, double value, int depth) 
 {

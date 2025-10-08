@@ -32,6 +32,8 @@ private:
 
     TreeNode* root;
     int maxDepth = -1; // No limit by default
+    
+    int depthReached = 1;
 
     // Helpers
     TreeNode* insert_recursive(TreeNode* node, const std::vector<int>& coords, double value, int depth);
