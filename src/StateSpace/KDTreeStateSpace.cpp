@@ -76,8 +76,8 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
             }
         }
         // Add to bucket
-        std::cout << "Value added to bucket " << depthReached << " times\n";
-        depthReached++;
+        // std::cout << "Value added to bucket " << depthReached << " times\n";
+        // depthReached++;
         if (!node->isBucket) {
             node->isBucket = true;
         }
