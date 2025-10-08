@@ -61,9 +61,16 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
 
 
     if (maxDepth >= 0 && depth >= maxDepth) {
+        // Check if point already exists in bucket
+        for (auto* child : node->bucket) {
+            if (child->coords == coords) {
+                child->value = value;
+                return node;
+            }
+        }
+        // Add to bucket
         if (!node->isBucket) {
             node->isBucket = true;
-            node->bucket.push_back(node); // Add current node to bucket
         }
         TreeNode* newNode = new TreeNode(coords, value, depth % dimensions);
         node->bucket.push_back(newNode);
@@ -139,6 +146,11 @@ KDTreeStateSpace::nearest_neighbor(const std::vector<int>& coords) const {
         throw std::invalid_argument("Coordinate dimensionality mismatch");
     }
 
+    if (!root) {
+        // KDTree is empty, return empty vector
+        return {};
+    }
+
     TreeNode* nearestNode = nullptr;
     double bestDist = std::numeric_limits<double>::max();
 
@@ -168,10 +180,16 @@ void KDTreeStateSpace::nearest_recursive(TreeNode* node,
 
     // If this node is a bucket container, stop here — this bucket is the closest
     if (node->isBucket) {
-        bestNode = node;
-        bestDist = 0.0; // treat bucket as zero distance (closest granularity)
-        return;
+        for (auto* child : node->bucket) {
+            double dist = squared_distance(target, child->coords);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestNode = child;
+            }
+        }
+        return; // no need to go further
     }
+
 
     double dist = squared_distance(target, node->coords);
     if (dist < bestDist) {
