@@ -1,4 +1,4 @@
-// #if defined(DUMB) || defined(TESTING)
+#if defined(IDW) || defined(TESTING)
 #ifndef IDW_MODEL_H
 #define IDW_MODEL_H
 
@@ -29,3 +29,4 @@ public:
 
 
 #endif // IDW_MODEL_H
+#endif // IDW || TESTING

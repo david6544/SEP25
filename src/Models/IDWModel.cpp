@@ -1,3 +1,4 @@
+#if defined(IDW) || defined(TESTING)
 #include "IDWModel.hpp"
 
 
@@ -96,3 +97,4 @@ double IDWModel::get_value_at(const std::vector<int>& query) {
     return stateSpace->get(query);
 }
 
+#endif // IDW || TESTING
