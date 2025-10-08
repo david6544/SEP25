@@ -12,7 +12,7 @@ KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)
         for (int d = 0; d < dimensions; ++d)
             totalPoints *= dimensionSize;
 
-        this->maxDepth = static_cast<int>(std::ceil(std::log2(totalPoints))) * 4; // 400% deeper
+        this->maxDepth = static_cast<int>(std::ceil(std::log2(totalPoints))) * 3; // 300% deeper
 
         // std::cout << "KDTree max depth set to " << this->maxDepth << "\n";
     }
@@ -83,6 +83,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
         }
         TreeNode* newNode = new TreeNode(coords, value, depth % dimensions);
         node->bucket.push_back(newNode);
+        std::cout << "Bucket size: " << node->bucket.size() << "\n";
         return node;
     }
 

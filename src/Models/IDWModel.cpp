@@ -22,6 +22,8 @@ double IDWModel::predictValueAt(const std::vector<int>& query) {
     double weightTotal = 0.0;
     const double epsilon = 1e-9;
 
+    std::cout << neighbors.size() << " neighbors found for prediction at ";
+    
     for (auto* node : neighbors) {
         double dist2 = stateSpace->squared_distance(query, node->coords);
         double dist = std::sqrt(dist2 + epsilon);
