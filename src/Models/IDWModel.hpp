@@ -13,7 +13,7 @@ class IDWModel : public Model {
     KDTreeStateSpace* stateSpace;
     int visitCount;        // How many times queries have been made near this node
     double totalError;     // Cumulative prediction error at this location
-
+    std::unordered_set<std::string> visited;
 
     double predictValueAt(const std::vector<int>& query);
 

@@ -1,6 +1,12 @@
 #if defined(IDW) || defined(TESTING)
 #include "IDWModel.hpp"
 
+// Helper to hash coordinates for visited set
+std::string hash_coords(const std::vector<int>& coords) {
+    std::string h;
+    for (auto v : coords) h += std::to_string(v) + ",";
+    return h;
+}
 
 IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {
     this->currentQuery = 0;
@@ -43,54 +49,91 @@ double IDWModel::predictValueAt(const std::vector<int>& query) {
 std::vector<int> IDWModel::get_next_query() {
     ++currentQuery;
 
+    // --- Step 1: Final query — fill the entire state space ---
     if (currentQuery >= totalQueries) {
-        // Fill in entire state space with predicted values
-        for (int i = 0; i < dimensionSize; ++i) {
-            for (int j = 0; j < dimensionSize; ++j) {
-                std::vector<int> coords(dimensions);
-                if (dimensions >= 1) coords[0] = i;
-                if (dimensions >= 2) coords[1] = j;
-                // Extend for higher dimensions if needed
+        std::vector<int> coords(dimensions, 0);
+
+        // Recursive helper to enumerate all points in N-dimensional space
+        std::function<void(int)> fillSpace;
+        fillSpace = [&](int dim) {
+            if (dim == dimensions) {
                 // Predict and insert
                 double predicted = predictValueAt(coords);
                 stateSpace->insert(coords, predicted);
+                visited.insert(hash_coords(coords));
+                return;
             }
-        }
-        // Return a dummy query (won’t matter, KDTree now fully populated)
+            for (int i = 0; i < dimensionSize; ++i) {
+                coords[dim] = i;
+                fillSpace(dim + 1);
+            }
+        };
+
+        fillSpace(0);
+
+        // Return a dummy query (won't matter)
         return std::vector<int>(dimensions, 0);
     }
 
-    // Existing query selection logic
+    // --- Step 2: Select next query normally ---
     auto root = stateSpace->get_root();
     if (!root) {
         std::vector<int> mid(dimensions, dimensionSize / 2);
+        visited.insert(hash_coords(mid));
         return mid;
     }
 
     std::vector<int> bestQuery(dimensions);
     double lowestConfidence = std::numeric_limits<double>::max();
+    bool found = false;
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 100; ++i) { // Increased trials for better coverage
         std::vector<int> candidate(dimensions);
         for (int d = 0; d < dimensions; ++d) {
             candidate[d] = rand() % dimensionSize;
         }
 
-        double predicted = predictValueAt(candidate);
+        if (visited.count(hash_coords(candidate)) > 0) continue;
+
         auto neighbors = stateSpace->nearest_neighbor(candidate);
         double avgError = 0.0;
         for (auto* n : neighbors) avgError += n->totalError;
         avgError /= std::max(1, (int)neighbors.size());
 
         double confidence = avgError + (neighbors.empty() ? 1.0 : neighbors.front()->visitCount);
+
         if (confidence < lowestConfidence) {
             lowestConfidence = confidence;
             bestQuery = candidate;
+            found = true;
         }
     }
 
+    // --- Step 3: Fallback if random sampling didn't find an unvisited point ---
+    if (!found) {
+        std::vector<int> coords(dimensions, 0);
+        std::function<bool(int)> findUnvisited;
+        findUnvisited = [&](int dim) -> bool {
+            if (dim == dimensions) {
+                if (visited.count(hash_coords(coords)) == 0) {
+                    bestQuery = coords;
+                    return true;
+                }
+                return false;
+            }
+            for (int i = 0; i < dimensionSize; ++i) {
+                coords[dim] = i;
+                if (findUnvisited(dim + 1)) return true;
+            }
+            return false;
+        };
+        findUnvisited(0);
+    }
+
+    visited.insert(hash_coords(bestQuery));
     return bestQuery;
 }
+
 
 
 
