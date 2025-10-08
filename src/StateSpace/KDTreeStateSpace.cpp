@@ -9,6 +9,7 @@ KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)
         // Can also just choose a fixed max depth. This is a heuristic.
         // Setting maxDepth to -1 means no limit.
         this->maxDepth = static_cast<int>(std::log2(dimensionSize)) * dimensions;
+        std::cout << "KDTree max depth set to " << this->maxDepth << "\n";
     }
 
 // Destructor
@@ -50,6 +51,7 @@ double KDTreeStateSpace::insert(const std::vector<int>& coords, double value) {
 }
 
 // Recursive insert
+int depthRached = 0;
 KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     TreeNode* node, const std::vector<int>& coords, double value, int depth) 
 {
@@ -62,7 +64,8 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
 
     if (maxDepth >= 0 && depth >= maxDepth) {
         // Check if point already exists in bucket
-        std::cout << "Max depth reached, inserting into bucket\n";
+        std::cout << "Max depth reached at depth " << depth << "\n";
+        depthRached = depth;
         for (auto* child : node->bucket) {
             if (child->coords == coords) {
                 child->value = value;
