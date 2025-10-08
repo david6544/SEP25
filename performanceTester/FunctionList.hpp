@@ -1,6 +1,7 @@
 #pragma once
 #include<vector>
 #include<math.h>
+#include <algorithm>
 
 /*
 * Namespace for holding state space functions
@@ -15,7 +16,9 @@ double translateIntoHypercube(int x, double lowerBound, double upperBound) {
     return lowerBound + x * scale;
 }
 
-
+inline double normalize(double value, double minVal, double maxVal) {
+    return std::clamp((value - minVal) / (maxVal - minVal), 0.0, 1.0);
+}
 
 // Ackley Function
 // Hypercube in x_i ∈ [-32.768, 32.768],
@@ -44,7 +47,10 @@ double ackleyFunction(const std::vector<int>& query){
     double term1 = -a * exp(-b * sqrt(sumSquares / d));
     double term2 = -exp( sumCos / d);
 
-    return term1 + term2 + a + exp(1);
+    double raw = term1 + term2 + a + std::exp(1);
+
+    // Ackley min = 0, typical max ≈ 22
+    return normalize(raw, 0.0, 22.0);
 }
 
 
@@ -62,7 +68,8 @@ double sumpow (const std::vector<int>& query) {
         double xd = testfunctions::translateIntoHypercube(query[i-1], -1, 1);
         sumSquares += pow(abs(xd),query.size() + 1);
     }
-    return sumSquares;
+
+    return normalize(sumSquares, 0.0, (double)query.size());
 }
 
 // Griewank function
@@ -80,7 +87,11 @@ double griewank(const std::vector<int>& query) {
         sumTerm1 += pow(xd,2) / 4000;
         prodTerm *= cos((xd)/sqrt(i));
     }
-    return sumTerm1 - prodTerm + 1;
+
+    double raw = sumTerm1 - prodTerm + 1;
+    // Griewank ∈ [0, ~2]
+    return normalize(raw, 0.0, 2.0);
+
 }
 
 // Rastrigin function
@@ -96,7 +107,10 @@ double rastrigin(const std::vector<int>& query) {
         double xd = testfunctions::translateIntoHypercube(x, -5.12, 5.12);
         sumTerm += pow((xd),2) - 10 * cos(2* M_PI * xd);
     }
-    return dimTerm + sumTerm;
+
+    double raw = 10 * query.size() + sumTerm;
+    // Rastrigin ∈ [0, ~200 * n]
+    return normalize(raw, 0.0, 200.0 * query.size());
 }
 
 // Michalewicz function
@@ -114,7 +128,8 @@ double michalewicz(const std::vector<int>& query) {
         sumTerm += sin(xd) * pow(sin((i * pow(xd,2))/M_PI),2*m);
     }
 
-    return std::abs(sumTerm);
+    // Michalewicz ∈ [0, n]
+    return normalize(std::abs(sumTerm), 0.0, (double)query.size());
 }
 
 // Power Sum Function
@@ -138,7 +153,9 @@ double powerSum(const std::vector<int>& query) {
         sumTerm -= b[j-1];
         finalTerm += pow(sumTerm,2);
     }
-    return finalTerm;
+
+    // Empirically varies widely; scale by dimension²
+    return normalize(finalTerm, 0.0, d * d * 100.0);
 }
 
 
@@ -148,20 +165,15 @@ double powerSum(const std::vector<int>& query) {
 // Dimensions: n
 // https://www.sfu.ca/~ssurjano/zakharov.html
 double zakharov(const std::vector<int>& query) {
-
-    double d = query.size();
-    
-    double sumTerm1 = 0.0;
-    double sumTerm2 = 0.0;
-    double sumTerm3 = 0.0;
-
-    for (int i = 1; i <= query.size(); i++) {
-        double xd = testfunctions::translateIntoHypercube(query[i-1], -5, 10);
-        sumTerm1 += pow(xd,2);
-        sumTerm2 += 0.5 * i * xd;
-        sumTerm3 += 0.5 * i * xd;
+    double sum1 = 0.0, sum2 = 0.0;
+    for (int i = 1; i <= (int)query.size(); i++) {
+        double xd = translateIntoHypercube(query[i - 1], -5, 10);
+        sum1 += xd * xd;
+        sum2 += 0.5 * i * xd;
     }
-    return sumTerm1 + pow(sumTerm2,2) + pow(sumTerm3, 4);
+    double raw = sum1 + std::pow(sum2, 2) + std::pow(sum2, 4);
+    // Zakharov ∈ [0, ~1000 * n]
+    return normalize(raw, 0.0, 1000.0 * query.size());
 }
 
 
@@ -171,19 +183,14 @@ double zakharov(const std::vector<int>& query) {
 // Dimensions: n
 // https://www.sfu.ca/~ssurjano/dixonpr.html
 double dixonPrice(const std::vector<int>& query) {
-
-    double d = query.size();
-    
-    double sumTerm = 0.0;
-    double initalTerm = pow(query[0] - 1, 2);
-
-
-    for (int i = 2; i <= query.size(); i++) {
-        double xd = testfunctions::translateIntoHypercube(query[i-1], -10, 10);
-        double xdPrior = testfunctions::translateIntoHypercube(query[i-2], -10, 10);
-        sumTerm += i * pow((2 * pow(xd,2) - xdPrior),2);
+    double sumTerm = std::pow(translateIntoHypercube(query[0], -10, 10) - 1, 2);
+    for (int i = 2; i <= (int)query.size(); i++) {
+        double xd = translateIntoHypercube(query[i - 1], -10, 10);
+        double xdPrior = translateIntoHypercube(query[i - 2], -10, 10);
+        sumTerm += i * std::pow((2 * xd * xd - xdPrior), 2);
     }
-    return initalTerm + sumTerm;
+    // Dixon-Price ∈ [0, ~500 * n]
+    return normalize(sumTerm, 0.0, 500.0 * query.size());
 }
 
 
@@ -194,15 +201,14 @@ double dixonPrice(const std::vector<int>& query) {
 // Dimensions: n
 // https://www.sfu.ca/~ssurjano/rosen.html
 double rosenbrock(const std::vector<int>& query) {
-    
-    double sumTerm1 = 0.0;
-
-    for (int i = 1; i < query.size(); i++) {
-        double xd = testfunctions::translateIntoHypercube(query[i-1], -5, 10);
-        double xdPost = testfunctions::translateIntoHypercube(query[i], -5, 10);
-        sumTerm1 += 100 * pow(xdPost - pow(xd,2), 2) + pow(xd - 1, 2);
+    double sumTerm = 0.0;
+    for (int i = 0; i < (int)query.size() - 1; i++) {
+        double xd = translateIntoHypercube(query[i], -5, 10);
+        double xdPost = translateIntoHypercube(query[i + 1], -5, 10);
+        sumTerm += 100 * std::pow(xdPost - xd * xd, 2) + std::pow(xd - 1, 2);
     }
-    return sumTerm1;
+    // Rosenbrock ∈ [0, ~5000 * n]
+    return normalize(sumTerm, 0.0, 5000.0 * query.size());
 }
 
 
@@ -212,15 +218,14 @@ double rosenbrock(const std::vector<int>& query) {
 // Dimensions: n
 // https://www.sfu.ca/~ssurjano/rothyp.html
 double hyperEllipsoid(const std::vector<int>& query) {
-    
     double sumTerm = 0.0;
-
-    for (int i = 0; i < query.size(); i++) {
-        for (int j = 0; j < i; j++) {
-            sumTerm += pow(query[j],2);
+    for (int i = 0; i < (int)query.size(); i++) {
+        for (int j = 0; j <= i; j++) {
+            double xd = translateIntoHypercube(query[j], -65.536, 65.536);
+            sumTerm += xd * xd;
         }
     }
-
-    return sumTerm;
+    // HyperEllipsoid ∈ [0, ~1e5 * n]
+    return normalize(sumTerm, 0.0, 100000.0 * query.size());
 }
 }
