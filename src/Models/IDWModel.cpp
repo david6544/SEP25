@@ -41,14 +41,32 @@ double IDWModel::predictValueAt(const std::vector<int>& query) {
 
 
 std::vector<int> IDWModel::get_next_query() {
+    ++currentQuery;
+
+    if (currentQuery >= totalQueries) {
+        // Fill in entire state space with predicted values
+        for (int i = 0; i < dimensionSize; ++i) {
+            for (int j = 0; j < dimensionSize; ++j) {
+                std::vector<int> coords(dimensions);
+                if (dimensions >= 1) coords[0] = i;
+                if (dimensions >= 2) coords[1] = j;
+                // Extend for higher dimensions if needed
+                // Predict and insert
+                double predicted = predictValueAt(coords);
+                stateSpace->insert(coords, predicted);
+            }
+        }
+        // Return a dummy query (won’t matter, KDTree now fully populated)
+        return std::vector<int>(dimensions, 0);
+    }
+
+    // Existing query selection logic
     auto root = stateSpace->get_root();
     if (!root) {
-        // First query: start in the middle
         std::vector<int> mid(dimensions, dimensionSize / 2);
         return mid;
     }
 
-    // Sample a few random points and pick one with the highest uncertainty
     std::vector<int> bestQuery(dimensions);
     double lowestConfidence = std::numeric_limits<double>::max();
 
@@ -73,6 +91,7 @@ std::vector<int> IDWModel::get_next_query() {
 
     return bestQuery;
 }
+
 
 
 
