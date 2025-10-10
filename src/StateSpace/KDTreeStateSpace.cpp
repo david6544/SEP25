@@ -65,54 +65,60 @@ double KDTreeStateSpace::insert(const std::vector<int>& coords, double value) {
 
 // Recursive insert
 KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
-    TreeNode* node, const std::vector<int>& coords, double value, int depth) 
+    TreeNode* node, const std::vector<int>& coords, double value, int depth)
 {
     int axis = depth % this->dimensions;
+
     if (!node) {
         TreeNode* newNode = new TreeNode(coords, value, axis);
-        // Add to leaves map
         this->leaves[coordsToString(coords)] = newNode;
         return newNode;
     }
 
-    // If max depth reached, store in bucket
+    // If max depth reached, bucket
     if (maxDepth >= 0 && depth >= maxDepth) {
-        // Check if point already exists in bucket
-        
         for (auto* child : node->bucket) {
             if (child->coords == coords) {
                 child->value = value;
                 return node;
             }
         }
-        // Add to bucket
         if (!node->isBucket) {
             node->isBucket = true;
-            this->leaves.erase(coordsToString(node->coords));
+            this->leaves.erase(coordsToString(node->coords)); // remove parent
         }
-        TreeNode* newNode = new TreeNode(coords, value, depth % dimensions);
+        TreeNode* newNode = new TreeNode(coords, value, axis);
         node->bucket.push_back(newNode);
-        // Add to leaves map
         this->leaves[coordsToString(coords)] = newNode;
         return node;
     }
 
-    if (node->left == nullptr && node->right == nullptr && !node->isBucket) {
-        this->leaves.erase(coordsToString(node->coords));
+    // Handle value update
+    if (coords == node->coords) {
+        node->value = value;
+        return node;
     }
 
-    if (coords == node->coords) {
-        // If point already exists, update its value
-        node->value = value;
-    } else if (coords[axis] < node->coords[axis]) {
-        // Remove from leaf map if it exists
+    // --- The critical fix starts here ---
+    bool insertedLeft = (coords[axis] < node->coords[axis]);
+    if (insertedLeft) {
+        if (node->left == nullptr && node->right == nullptr)
+            this->leaves.erase(coordsToString(node->coords)); // parent no longer leaf
         node->left = insert_recursive(node->left, coords, value, depth + 1);
     } else {
+        if (node->left == nullptr && node->right == nullptr)
+            this->leaves.erase(coordsToString(node->coords));
         node->right = insert_recursive(node->right, coords, value, depth + 1);
+    }
+
+    // If both children are null, this node is a leaf — ensure it's in map
+    if (node->left == nullptr && node->right == nullptr && !node->isBucket) {
+        this->leaves[coordsToString(node->coords)] = node;
     }
 
     return node;
 }
+
 
 // Public get entry point
 double KDTreeStateSpace::get(const std::vector<int>& coords) const {
