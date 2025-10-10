@@ -58,7 +58,14 @@ public:
 
     double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
 
-    std::unordered_map<std::string, TreeNode*> get_leaves() const { return leaves; }
+    std::vector<TreeNode*> get_leaves() const { 
+        std::vector<TreeNode*> leafNodes;
+    
+        for (const auto& pair : leaves) {
+            leafNodes.push_back(pair.second);
+        }
+        return leafNodes;
+    }
 };
 
 #endif // KD_TREE_STATE_SPACE

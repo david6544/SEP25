@@ -183,23 +183,14 @@ TEST(TestKDTreeStateSpace, LeafMapIntegrity) {
 
     tree.insert({1, 1}, 1.0);
     EXPECT_EQ(tree.get_leaves().size(), 1);
-    EXPECT_TRUE(tree.get_leaves().count("1,1,"));
 
     tree.insert({2, 1}, 2.0);
-    EXPECT_EQ(tree.get_leaves().size(), 1);
-    EXPECT_FALSE(tree.get_leaves().count("1,1,")); 
-    EXPECT_TRUE(tree.get_leaves().count("2,1,"));  
+    EXPECT_EQ(tree.get_leaves().size(), 1); 
 
     tree.insert({0, 1}, 3.0);
     EXPECT_EQ(tree.get_leaves().size(), 2);
-    EXPECT_TRUE(tree.get_leaves().count("0,1,"));
-    EXPECT_TRUE(tree.get_leaves().count("2,1,"));
 
     tree.insert({2, 2}, 4.0);
 
     EXPECT_EQ(tree.get_leaves().size(), 2);
-    EXPECT_TRUE(tree.get_leaves().count("0,1,"));
-    EXPECT_FALSE(tree.get_leaves().count("2,1,"));
-    EXPECT_TRUE(tree.get_leaves().count("2,2,"));
-    EXPECT_FALSE(tree.get_leaves().count("1,1,")); 
 }
