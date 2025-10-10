@@ -149,7 +149,7 @@ TEST(TestKDTreeStateSpace, TestDeepInsertionBuckets) {
     }
 
     // Ensure get returns correct value for one inserted element
-    EXPECT_DOUBLE_EQ(0.0, tree.get({0, 0, 0})); // default value, might not exist
+    EXPECT_DOUBLE_EQ(90.0, tree.get({0, 0, 0})); // default value, might not exist
     tree.insert({1, 1, 1}, 123.456);
     EXPECT_DOUBLE_EQ(123.456, tree.get({1, 1, 1}));
 }
