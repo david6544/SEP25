@@ -19,11 +19,11 @@ private:
         TreeNode* right;
 
         // For locality calculations
-        int visitCount = 0;    // How many times queries have been made near this node
-        double totalError = 0.0; // Cumulative prediction error at this location
-        // For variance computation
-        double meanValue = 0.0;   // running mean of observed values
-        double M2 = 0.0;          // sum of squared deviations from mean (Welford)
+        // int visitCount = 0;    // How many times queries have been made near this node
+        // double totalError = 0.0; // Cumulative prediction error at this location
+        // // For variance computation
+        // double meanValue = 0.0;   // running mean of observed values
+        // double M2 = 0.0;          // sum of squared deviations from mean (Welford)
         //
         std::vector<TreeNode*> bucket; // optional for bucket nodes
         bool isBucket;
@@ -48,17 +48,17 @@ private:
                                          TreeNode*& bestNode,
                                          double& bestDist) const;
 
-    void nearest_recursive_k(
-                        TreeNode* node,
-                        const std::vector<int>& target,
-                        int depth,
-                        int k,
-                        std::priority_queue<
-                            std::pair<double, TreeNode*>,
-                            std::vector<std::pair<double, TreeNode*>>,
-                            std::less<std::pair<double, TreeNode*>>
-                        >& bestNeighbors
-                    ) const;
+    // void nearest_recursive_k(
+    //                     TreeNode* node,
+    //                     const std::vector<int>& target,
+    //                     int depth,
+    //                     int k,
+    //                     std::priority_queue<
+    //                         std::pair<double, TreeNode*>,
+    //                         std::vector<std::pair<double, TreeNode*>>,
+    //                         std::less<std::pair<double, TreeNode*>>
+    //                     >& bestNeighbors
+    //                 ) const;
     
 
 public:
@@ -73,8 +73,8 @@ public:
     double insert(const std::vector<int>& coords, double value);
 
     TreeNode* get_root();
-    std::vector<KDTreeStateSpace::TreeNode*> nearest_neighbor(const std::vector<int>& coords) const;
-    std::vector<KDTreeStateSpace::TreeNode*> nearest_k_neighbors(const std::vector<int>& coords, int k) const;
+    KDTreeStateSpace::TreeNode* nearest_neighbor(const std::vector<int>& coords) const;
+    // std::vector<KDTreeStateSpace::TreeNode*> nearest_k_neighbors(const std::vector<int>& coords, int k) const;
 
     double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
 };
