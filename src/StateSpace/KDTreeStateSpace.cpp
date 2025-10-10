@@ -99,7 +99,6 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
         return node;
     }
 
-    // --- The critical fix starts here ---
     bool insertedLeft = (coords[axis] < node->coords[axis]);
     if (insertedLeft) {
         if (node->left == nullptr && node->right == nullptr)
