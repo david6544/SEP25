@@ -1,3 +1,13 @@
+/**
+ * @file Model.hpp
+ * @author your name (you@domain.com) PLS UPDATE
+ * @brief This file declares an abstract Model class that serves as a base for different modeling strategies.
+ * @version 0.1
+ * @date 2025-08-27
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef MODEL_H
 #define MODEL_H
 #include <vector>
