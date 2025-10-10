@@ -6,6 +6,7 @@
 #include <queue>
 #include <cmath>
 #include <limits>
+#include <unordered_map>
 
 #include "StateSpace.hpp"
 
@@ -18,13 +19,6 @@ private:
         TreeNode* left;
         TreeNode* right;
 
-        // For locality calculations
-        // int visitCount = 0;    // How many times queries have been made near this node
-        // double totalError = 0.0; // Cumulative prediction error at this location
-        // // For variance computation
-        // double meanValue = 0.0;   // running mean of observed values
-        // double M2 = 0.0;          // sum of squared deviations from mean (Welford)
-        //
         std::vector<TreeNode*> bucket; // optional for bucket nodes
         bool isBucket;
 
@@ -35,8 +29,7 @@ private:
 
     TreeNode* root;
     int maxDepth = -1; // No limit by default
-    
-    int depthReached = 1;
+    std::unordered_map<std::string, TreeNode*> leaves;
 
     // Helpers
     TreeNode* insert_recursive(TreeNode* node, const std::vector<int>& coords, double value, int depth);
@@ -47,20 +40,8 @@ private:
                                          int depth,
                                          TreeNode*& bestNode,
                                          double& bestDist) const;
-
-    // void nearest_recursive_k(
-    //                     TreeNode* node,
-    //                     const std::vector<int>& target,
-    //                     int depth,
-    //                     int k,
-    //                     std::priority_queue<
-    //                         std::pair<double, TreeNode*>,
-    //                         std::vector<std::pair<double, TreeNode*>>,
-    //                         std::less<std::pair<double, TreeNode*>>
-    //                     >& bestNeighbors
-    //                 ) const;
+    std::string coordsToString(std::vector<int> coords) const;
     
-
 public:
     KDTreeStateSpace(int dimensions, int dimensionSize);
 
@@ -74,9 +55,10 @@ public:
 
     TreeNode* get_root();
     KDTreeStateSpace::TreeNode* nearest_neighbor(const std::vector<int>& coords) const;
-    // std::vector<KDTreeStateSpace::TreeNode*> nearest_k_neighbors(const std::vector<int>& coords, int k) const;
 
     double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
+
+    std::unordered_map<std::string, TreeNode*> get_leaves() const { return leaves; }
 };
 
 #endif // KD_TREE_STATE_SPACE

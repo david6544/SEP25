@@ -22,11 +22,19 @@ KDTreeStateSpace::~KDTreeStateSpace() {
     destroy(root);
 }
 
+// Helper
+std::string KDTreeStateSpace::coordsToString(std::vector<int> coords) const {
+    std::string key;
+    for (int c : coords) {
+        key += std::to_string(c) + ",";
+    }
+    return key;
+}
+
 // Recursively free nodes
 void KDTreeStateSpace::destroy(TreeNode* node) {
     if (!node) return;
 
-    // Recursively free all bucketed children
     for (auto* child : node->bucket) {
         destroy(child);
     }
@@ -60,12 +68,14 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     TreeNode* node, const std::vector<int>& coords, double value, int depth) 
 {
     int axis = depth % this->dimensions;
-    // It may also be beneficial here to do depth limit and bucketing.
     if (!node) {
-        return new TreeNode(coords, value, axis);
+        TreeNode* newNode = new TreeNode(coords, value, axis);
+        // Add to leaves map
+        this->leaves[coordsToString(coords)] = newNode;
+        return newNode;
     }
 
-
+    // If max depth reached, store in bucket
     if (maxDepth >= 0 && depth >= maxDepth) {
         // Check if point already exists in bucket
         
@@ -78,17 +88,24 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
         // Add to bucket
         if (!node->isBucket) {
             node->isBucket = true;
+            this->leaves.erase(coordsToString(node->coords));
         }
         TreeNode* newNode = new TreeNode(coords, value, depth % dimensions);
         node->bucket.push_back(newNode);
+        // Add to leaves map
+        this->leaves[coordsToString(coords)] = newNode;
         return node;
     }
 
+    if (node->left == nullptr && node->right == nullptr && !node->isBucket) {
+        this->leaves.erase(coordsToString(node->coords));
+    }
 
     if (coords == node->coords) {
         // If point already exists, update its value
         node->value = value;
     } else if (coords[axis] < node->coords[axis]) {
+        // Remove from leaf map if it exists
         node->left = insert_recursive(node->left, coords, value, depth + 1);
     } else {
         node->right = insert_recursive(node->right, coords, value, depth + 1);

@@ -176,3 +176,31 @@ TEST(TestKDTreeStateSpace, TestMultipleInsertsAndGets) {
         }
     }
 }
+
+TEST(TestKDTreeStateSpace, LeafMapIntegrity) {
+    KDTreeStateSpace tree(2, 4);
+    EXPECT_TRUE(tree.get_leaves().empty());
+
+    tree.insert({0, 0}, 1.0);
+    EXPECT_EQ(tree.get_leaves().size(), 1);
+    EXPECT_TRUE(tree.get_leaves().count("0,0,"));
+
+    // Insert second point on same axis — causes a split
+    tree.insert({1, 0}, 2.0);
+    // Root should no longer be a leaf, both children should be
+    EXPECT_EQ(tree.get_leaves().size(), 2);
+    EXPECT_TRUE(tree.get_leaves().count("0,0,"));
+    EXPECT_TRUE(tree.get_leaves().count("1,0,"));
+    EXPECT_FALSE(tree.get_leaves().count("0,0,") && tree.get_root()->left == nullptr);
+
+    // Insert more points to deepen tree
+    tree.insert({0, 1}, 3.0);
+    tree.insert({1, 1}, 4.0);
+    EXPECT_EQ(tree.get_leaves().size(), 4);
+
+    // All 4 coordinates should exist
+    EXPECT_TRUE(tree.get_leaves().count("0,0,"));
+    EXPECT_TRUE(tree.get_leaves().count("1,0,"));
+    EXPECT_TRUE(tree.get_leaves().count("0,1,"));
+    EXPECT_TRUE(tree.get_leaves().count("1,1,"));
+}
