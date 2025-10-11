@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <random>
 #include <limits>
-#include "GaussianProcess.hpp"
 #include "../Tools/CandidateGenerator.hpp"
 
 struct TreeNode {
