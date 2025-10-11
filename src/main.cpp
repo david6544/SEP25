@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 
 #include "InputOutput/CommandLineInputOutput.hpp"
 
@@ -8,6 +9,9 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(TestM)
+    #include "Models/TestModel.hpp"
+    #define CurrentModel TestModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif

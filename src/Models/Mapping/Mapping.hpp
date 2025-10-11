@@ -6,5 +6,7 @@ protected:
 public:
     Mapping(std::vector<std::pair<double, std::vector<int>>> queriedPoints) : queriedPoints(queriedPoints) {}
 
-    virtual double predict(std::vector<int> query);
+    virtual ~Mapping() {};
+
+    virtual double predict(std::vector<int> query) = 0;
 };

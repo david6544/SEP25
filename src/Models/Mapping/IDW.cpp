@@ -22,7 +22,7 @@ double IDW::predict(std::vector<int> query) {
     for (const auto& pv : relevantPoints) {
         const std::vector<int>& coords = pv.point;
         
-        if (pv.distance < EPS) return pv.value;
+        if (pv.distance < EPS || pv.point == query) return pv.value;
 
         float weight = 1.0f / std::pow(pv.distance, this->power);
         numerator += weight * pv.value;
