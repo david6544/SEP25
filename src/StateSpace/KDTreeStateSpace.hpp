@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "StateSpace.hpp"
 
@@ -28,8 +29,8 @@ private:
 
 
     TreeNode* root;
-    int maxDepth = -1; // No limit by default
-    std::unordered_map<std::string, TreeNode*> leaves;
+    int bucketSizeThreshold = 0; // No limit by default
+    std::unordered_set<TreeNode*> leafNodes;
 
     // Helpers
     TreeNode* insert_recursive(TreeNode* node, const std::vector<int>& coords, double value, int depth);
@@ -58,13 +59,12 @@ public:
 
     double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
 
-    std::vector<TreeNode*> get_leaves() const { 
-        std::vector<TreeNode*> leafNodes;
-    
-        for (const auto& pair : leaves) {
-            leafNodes.push_back(pair.second);
+    std::vector<TreeNode*> get_leaves() const {
+        std::vector<TreeNode*> leafNodesVec;
+        for (const auto& node : leafNodes) {
+            leafNodesVec.push_back(node);
         }
-        return leafNodes;
+        return leafNodesVec;
     }
 };
 
