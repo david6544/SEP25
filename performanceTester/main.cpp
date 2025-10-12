@@ -34,10 +34,12 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
     InputOutput* io = InputOutput::get_instance();
 
     CurrentModel model(dimensions, dimensionSize, queries);
-
+    
     for (int i = 0; i < queries; i++) {
         std::vector<int> query = model.get_next_query();
+
         double result = io->send_query_recieve_result(query);
+
         model.update_prediction(query, result);
     }
     if (outputStateSpace){

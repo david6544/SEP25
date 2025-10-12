@@ -26,7 +26,7 @@ typedef struct Results {
     double realMean = 0.0;
     void updateResults(double actual, double predicted){
         totalSeen++;
-        if (predicted >= actual * 0.99 && predicted <= actual * 1.01){
+        if (abs(predicted - actual) <= 0.1){
             this->correct++;
         }
         double error = abs(actual-predicted);

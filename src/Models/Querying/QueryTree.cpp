@@ -6,25 +6,27 @@
 QueryTree::QueryTree(int dims, int dimSize, int leafSize)
     : dims(dims), dimSize(dimSize), leafSize(leafSize) 
 {
-    cg = new CandidateGenerator(dims, dimSize);
     root = new TreeNode;
     root->dimensionLimits = std::vector<std::vector<int>>(dims, {0, dimSize-1});
+    root->cg = new CandidateGenerator(dims, root->dimensionLimits);
     leaves.insert(root);
 }
 
 void freeTree(TreeNode* node){
-    if (node == nullptr) return;
+    if (!node) return;
     
     if (node->left) freeTree(node->left);
-
     if (node->right) freeTree(node->right);
+
+    delete node->cg;
+    node->cg = nullptr;
 
     delete node;
 }
 
+
 QueryTree::~QueryTree(){
     freeTree(root);
-    delete cg;
 }
 
 bool QueryTree::point_in_leaf(const std::vector<int>& query, const TreeNode* leaf) {
@@ -35,7 +37,6 @@ bool QueryTree::point_in_leaf(const std::vector<int>& query, const TreeNode* lea
 }
 
 std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
-    // Empty leaf → geometric center
     if (leaf->points.empty()) {
         std::vector<int> mid(dims);
         for (int d = 0; d < dims; ++d)
@@ -43,14 +44,12 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
         return mid;
     }
 
-    // Generate candidates
-    std::vector<std::vector<int>> candidates = cg->getCandidates(leaf->dimensionLimits, 5);
+    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(10);
 
     std::vector<int> bestPoint;
     double bestScore = -1.0;
 
     for (auto& candidate : candidates) {
-        // Compute min distance to existing points
         double minDist = std::numeric_limits<double>::infinity();
         for (auto& p : leaf->points) {
             double dist = 0.0;
@@ -59,7 +58,6 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
             if (dist < minDist) minDist = dist;
         }
 
-        // Adjust score with leaf density
         double score = minDist / (1.0 + 0.1 * leaf->points.size());
 
         if (score > bestScore) {
@@ -68,7 +66,6 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
         }
     }
 
-    // Fallback
     if (bestPoint.empty()) {
         bestPoint.resize(dims);
         for (int d = 0; d < dims; ++d)
@@ -86,7 +83,6 @@ std::vector<int> QueryTree::get_next_query() {
     for (auto leaf : leaves) {
         std::vector<int> candidate = get_candidate(leaf);
 
-        // Score candidate relative to leaf points
         double score;
         if (!leaf->points.empty()) {
             double minDist = std::numeric_limits<double>::infinity();
@@ -97,7 +93,6 @@ std::vector<int> QueryTree::get_next_query() {
             }
             score = minDist / (1.0 + 0.1 * leaf->points.size());
         } else {
-            // Empty leaf → exploration priority
             score = 1e9;
         }
 
@@ -107,7 +102,6 @@ std::vector<int> QueryTree::get_next_query() {
         }
     }
 
-    // Fallback
     if (bestChoice.second.empty()) bestChoice.second = std::vector<int>(dims, dimSize / 2);
 
     return bestChoice.second;
@@ -115,64 +109,95 @@ std::vector<int> QueryTree::get_next_query() {
 
 
 void QueryTree::update_prediction(const std::vector<int>& query, double result) {
-    cg->addCandidate(query);
-    // find leaf
+    // Find leaf
     TreeNode* target = nullptr;
-    if (query == this->nextLeaf.first)
+    if (nextLeaf.second != nullptr && query == this->nextLeaf.first)
         target = nextLeaf.second;
     else
         for (auto leaf : leaves)
             if (point_in_leaf(query, leaf)) { target = leaf; break; }
-            
+
     if (!target) target = root;
+
+    try {
+        target->cg->addQueriedPoint(query);
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Warning: query outside leaf limits, skipping addQueriedPoint.\n";
+    }
 
     target->points.push_back({result, query});
 
-    if ((int)target->points.size() > leafSize) {
-        int n = target->points.size();
-        int bestDim = 0;
-        double bestVar = -1.0;
+    if ((int)target->points.size() <= leafSize) return;
 
-        for (int d = 0; d < dims; ++d) {
-            std::vector<double> vals;
-            vals.reserve(n);
-            for (auto& p : target->points) vals.push_back(p.second[d]);
-            double mean = std::accumulate(vals.begin(), vals.end(), 0.0) / n;
-            double var = 0.0;
-            for (auto v : vals) var += (v - mean) * (v - mean);
-            var /= n;
+    int n = target->points.size();
+    int bestDim = -1;
+    double bestVar = -1.0;
 
-            if (var > bestVar) { bestVar = var; bestDim = d; }
+    for (int d = 0; d < dims; ++d) {
+        std::vector<int> vals;
+        vals.reserve(n);
+        for (auto& p : target->points) vals.push_back(p.second[d]);
+
+        int minVal = *std::min_element(vals.begin(), vals.end());
+        int maxVal = *std::max_element(vals.begin(), vals.end());
+
+        if (maxVal <= minVal) continue;  // Cannot split this dimension
+
+        double mean = std::accumulate(vals.begin(), vals.end(), 0.0) / n;
+        double var = 0.0;
+        for (auto v : vals) var += (v - mean) * (v - mean);
+        var /= n;
+
+        if (var > bestVar) {
+            bestVar = var;
+            bestDim = d;
         }
-
-        std::sort(target->points.begin(), target->points.end(),
-                  [bestDim](auto &a, auto &b){ return a.second[bestDim] < b.second[bestDim]; });
-
-        int mid = n/2;
-        int splitValue = target->points[mid].second[bestDim];
-
-        auto left = new TreeNode();
-        auto right = new TreeNode();
-        left->parent = right->parent = target;
-
-        left->dimensionLimits = right->dimensionLimits = target->dimensionLimits;
-        left->dimensionLimits[bestDim][1] = splitValue;
-        right->dimensionLimits[bestDim][0] = splitValue + 1;
-
-        for (auto& p : target->points) {
-            if (p.second[bestDim] <= splitValue) left->points.push_back(p);
-            else right->points.push_back(p);
-        }
-
-        target->splitDim = bestDim;
-        target->splitValue = splitValue;
-        target->left = left;
-        target->right = right;
-
-        leaves.erase(target);
-        leaves.insert(left);
-        leaves.insert(right);
-
-        target->points.clear();
     }
+
+    if (bestDim == -1) return;
+
+    std::sort(target->points.begin(), target->points.end(),
+              [bestDim](auto &a, auto &b){ return a.second[bestDim] < b.second[bestDim]; });
+
+    int mid = n / 2;
+    int splitValue = target->points[mid].second[bestDim];
+
+    int parentMin = target->dimensionLimits[bestDim][0];
+    int parentMax = target->dimensionLimits[bestDim][1];
+
+    splitValue = std::max(parentMin, std::min(splitValue, parentMax - 1));
+
+    if (splitValue < parentMin || splitValue >= parentMax) return;
+
+    auto left = new TreeNode();
+    auto right = new TreeNode();
+    left->parent = right->parent = target;
+
+    left->dimensionLimits = right->dimensionLimits = target->dimensionLimits;
+    left->dimensionLimits[bestDim][1] = splitValue;
+    right->dimensionLimits[bestDim][0] = splitValue + 1;
+
+    if (left->dimensionLimits[bestDim][0] <= left->dimensionLimits[bestDim][1])
+        left->cg = new CandidateGenerator(dims, left->dimensionLimits);
+    if (right->dimensionLimits[bestDim][0] <= right->dimensionLimits[bestDim][1])
+        right->cg = new CandidateGenerator(dims, right->dimensionLimits);
+
+    for (auto& p : target->points) {
+        if (p.second[bestDim] <= splitValue && left) left->points.push_back(p);
+        else if (right) right->points.push_back(p);
+    }
+
+    target->splitDim = bestDim;
+    target->splitValue = splitValue;
+    target->left = left;
+    target->right = right;
+
+    leaves.erase(target);
+    if (left) leaves.insert(left);
+    if (right) leaves.insert(right);
+
+    if (nextLeaf.second == target) nextLeaf = {{}, nullptr};
+    target->points.clear();
 }
+
+

@@ -11,6 +11,11 @@ struct TreeNode {
     int splitDim = -1, splitValue = -1;
     std::vector<std::pair<double, std::vector<int>>> points;
     std::vector<std::vector<int>> dimensionLimits;
+    CandidateGenerator *cg;
+
+    ~TreeNode(){
+        delete cg;
+    }
 };
 
 class QueryTree {
@@ -22,7 +27,6 @@ public:
     std::pair<std::vector<int>, TreeNode*> nextLeaf;
 private:
     TreeNode* root;
-    CandidateGenerator* cg;
     std::set<TreeNode*> leaves;
     int dims, dimSize, leafSize;
     std::mt19937 rng{std::random_device{}()};

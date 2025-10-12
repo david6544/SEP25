@@ -12,6 +12,12 @@ IDW::~IDW(){
 }
 
 double IDW::predict(std::vector<int> query) {
+    for (const auto& existing : queriedPoints) {
+        if (existing.second == query) {
+            return existing.first;
+        }
+    }
+    
     size_t dim = query.size();
     float numerator = 0.0f;
     float denominator = 0.0f;

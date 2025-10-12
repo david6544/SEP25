@@ -5,7 +5,7 @@
 TestModel::TestModel(int dimensions, int dimensionSize, int totalQueries)
     : Model(dimensions, dimensionSize, totalQueries) 
 {
-    qt = new QueryTree(dimensions, dimensionSize, 10);
+    qt = new QueryTree(dimensions, dimensionSize, 15);
 }
 
 TestModel::~TestModel(){
@@ -25,7 +25,7 @@ void TestModel::update_prediction(const std::vector<int> &query, double result) 
     data.emplace_back(result, query);
 
     if (currentQuery == totalQueries) {
-        maper = new IDW(data, 5, 3);
+        maper = new IDW(data, 15, 2);
     }
 }
 
