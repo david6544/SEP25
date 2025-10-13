@@ -5,6 +5,7 @@ _deps/
 CMakeCache.txt
 CMakeFiles/
 .venv/
+*.venv/
 
 # Compiled files
 *.o
