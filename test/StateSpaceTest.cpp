@@ -258,6 +258,11 @@ TEST(TestKDTreeStateSpace, TestBucketSplitPreservesAllValues) {
     EXPECT_FALSE(root->isBucket);
 
     // Check that all values are retrievable
+    std::cout << tree.get({0, 0}) << "\n";
+    std::cout << tree.get({1, 1}) << "\n";
+    std::cout << tree.get({2, 2}) << "\n";
+    std::cout << tree.get({3, 3}) << "\n";
+    std::cout << tree.get({0, 3}) << "\n";
     EXPECT_DOUBLE_EQ(tree.get({0, 0}), 1.0);
     EXPECT_DOUBLE_EQ(tree.get({1, 1}), 2.0);
     EXPECT_DOUBLE_EQ(tree.get({2, 2}), 3.0);

@@ -96,7 +96,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
         if (node->bucket.size() >= static_cast<size_t>(this->bucketSizeThreshold) &&
             node->bucket.size() >= 2) // need at least 2 points to split sensibly
         {
-            // 1) Choose split axis by largest range
+            // Choose split axis by largest range
             int bestAxis = 0;
             int maxRange = -1;
             for (int d = 0; d < dimensions; ++d) {
@@ -231,7 +231,7 @@ double KDTreeStateSpace::get_recursive(TreeNode* node, const std::vector<int>& c
 
     if (coords == node->coords) return node->value;
 
-    int axis = depth % dimensions;
+    int axis = node->axis;
     if (coords[axis] < node->coords[axis]) {
         return get_recursive(node->left, coords, depth + 1);
     } else {
