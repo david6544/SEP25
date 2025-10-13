@@ -11,6 +11,8 @@ venv/
 .venv/
 *.venv/
 *__pycache__/
+# Performance Data
+/PerformanceData*
 
 # Compiled files
 *.o
