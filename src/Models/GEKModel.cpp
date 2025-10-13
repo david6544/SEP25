@@ -94,19 +94,54 @@ std::vector<int> GEKModel::get_next_query() {
 std::vector<int> GEKModel::get_random_query() {
     std::vector<int> query(dimensions);
     std::uniform_int_distribution<> dist(0, dimensionSize - 1);
-    bool unique = false;
-    while (!unique) {
-        for (int i = 0; i < dimensions; i++) {
-            query[i] = dist(gen);
-        }
-        unique = true;
-        for (const auto& q : observed_queries) {
-            if (q == query) {
-                unique = false;
-                break;
-            }
-        }
+    // If we've already observed every possible point in the discrete grid,
+    // avoid spinning forever trying to find a new unique point. In that case
+    // return a random point (allow repeats) since no unseen point exists.
+    int64_t totalArea = 1;
+    for (int d = 0; d < dimensions; ++d) totalArea *= int64_t(dimensionSize);
+    if ((int64_t)observed_queries.size() >= totalArea) {
+        for (int i = 0; i < dimensions; i++) query[i] = dist(gen);
+        return query; // all points seen; return a random (possibly repeated) query
     }
+
+    // Try a bounded number of random attempts to find an unseen point. This keeps
+    // average-case fast while avoiding pathological loops.
+    const int MAX_RANDOM_TRIES = 1000;
+    for (int attempt = 0; attempt < MAX_RANDOM_TRIES; ++attempt) {
+        for (int i = 0; i < dimensions; i++) query[i] = dist(gen);
+        bool unique = true;
+        for (const auto& q : observed_queries) {
+            if (q == query) { unique = false; break; }
+        }
+        if (unique) return query;
+    }
+
+    // Fallback: deterministically scan the space and return the first unobserved point.
+    // This is O(totalArea * observed) in the worst case, but it only runs when the
+    // random attempts fail (rare) and prevents infinite loops.
+    std::vector<int> candidate(dimensions);
+    // lexicographic enumeration
+    std::function<bool(int)> next = [&](int pos) -> bool {
+        if (pos == dimensions) {
+            // check if candidate is observed
+            bool seen = false;
+            for (const auto &q : observed_queries) {
+                if (q == candidate) { seen = true; break; }
+            }
+            if (!seen) { query = candidate; return true; }
+            return false;
+        }
+        for (int v = 0; v < dimensionSize; ++v) {
+            candidate[pos] = v;
+            if (next(pos + 1)) return true;
+        }
+        return false;
+    };
+    bool found = next(0);
+    if (found) return query;
+
+    // As a last resort (shouldn't happen), return a random point.
+    for (int i = 0; i < dimensions; i++) query[i] = dist(gen);
     return query;
 }
 
