@@ -72,7 +72,8 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     // Base case: create new node
     if (!node) {
         TreeNode* newNode = new TreeNode(coords, value, axis);
-        newNode->isBucket = true;
+        newNode->isBucket = true; 
+        newNode->bucket.push_back(new TreeNode(coords, value, axis)); // Adding itself to its bucket
         leafNodes.insert(newNode);
         return newNode;
     }
@@ -95,7 +96,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
         // Split only if threshold exceeded
         if (node->bucket.size() > static_cast<size_t>(bucketSizeThreshold)) {
 
-            // --- 1) choose split axis by largest range ---
+            // 1) Choose split axis by largest range
             int bestAxis = 0;
             int maxRange = -1;
             for (int d = 0; d < dimensions; ++d) {
@@ -112,23 +113,23 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
                 }
             }
 
-            // --- 2) sort bucket and pick median ---
+            // Sort by best axis and pick median
             std::sort(node->bucket.begin(), node->bucket.end(),
                       [bestAxis](TreeNode* a, TreeNode* b) {
                           return a->coords[bestAxis] < b->coords[bestAxis];
                       });
-
             size_t medianIndex = node->bucket.size() / 2;
             TreeNode* medianNode = node->bucket[medianIndex];
 
-            // --- 3) promote median into current node ---
+            // Promote median to current node
             node->coords = medianNode->coords;
             node->value  = medianNode->value;
             node->axis   = bestAxis;
+            // Node is no longer a bucket
             node->isBucket = false;
             leafNodes.erase(node);
 
-            // --- 4) reinsert all other points into children ---
+            // Reinsert all other points
             std::vector<TreeNode*> tmp = std::move(node->bucket);
             node->bucket.clear();
             node->left = node->right = nullptr;
@@ -138,23 +139,18 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
                     delete tmp[i]; // median already promoted
                     continue;
                 }
-
-                TreeNode* targetChild = (tmp[i]->coords[bestAxis] < node->coords[bestAxis])
-                                        ? node->left
-                                        : node->right;
                 if (tmp[i]->coords[bestAxis] < node->coords[bestAxis]) {
                     node->left = insert_recursive(node->left, tmp[i]->coords, tmp[i]->value, depth + 1);
                 } else {
                     node->right = insert_recursive(node->right, tmp[i]->coords, tmp[i]->value, depth + 1);
                 }
-
-                delete tmp[i]; // bucket node no longer needed
+                delete tmp[i]; // temporary bucket node no longer needed
             }
 
             return node;
         }
 
-        return node; // still a bucket
+        return node; // still a bucket, below threshold
     }
 
     // Standard KD-tree insertion
@@ -178,7 +174,6 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
 
     return node;
 }
-
 
 
 
