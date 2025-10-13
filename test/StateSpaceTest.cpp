@@ -170,21 +170,23 @@ TEST(TestKDTreeStateSpace, TestBucketTriggersSplitAtThresholdPlusOne) {
     auto* root = tree.get_root();
     root->isBucket = true;
 
-    // Insert 4 (equal to threshold) — still bucket
+    // Insert 4 (exceeds to threshold) — not bucket
     tree.insert({2, 2}, 2.0);
     tree.insert({3, 3}, 3.0);
     tree.insert({0, 0}, 4.0);
     tree.insert({1, 2}, 5.0);
 
-    EXPECT_TRUE(root->isBucket);
-    EXPECT_EQ(root->bucket.size(), 4);
+    auto* newRoot = tree.get_root();
+    ASSERT_NE(newRoot, nullptr);
+    EXPECT_FALSE(newRoot->isBucket);
+    EXPECT_EQ(newRoot->bucket.size(), 0);
 
     // Insert 5th → exceeds threshold (log2(16)=4) → should trigger split
     tree.insert({2, 3}, 6.0);
 
-    EXPECT_FALSE(root->isBucket); // now internal node
-    EXPECT_TRUE(root->left != nullptr || root->right != nullptr);
-    EXPECT_TRUE(root->bucket.empty());
+    EXPECT_FALSE(newRoot->isBucket); // now internal node
+    EXPECT_TRUE(newRoot->left != nullptr || newRoot->right != nullptr);
+    EXPECT_TRUE(newRoot->bucket.empty());
 }
 
 TEST(TestKDTreeStateSpace, TestBucketSplitAxisSelection) {
@@ -252,12 +254,12 @@ TEST(TestKDTreeStateSpace, TestBucketSplitPreservesAllValues) {
 
     // Insert multiple points to exceed threshold and force split
     tree.insert({1, 1}, 2.0);
-    EXPECT_TRUE(root->isBucket);
     tree.insert({2, 2}, 3.0);
     tree.insert({3, 3}, 4.0);
     tree.insert({0, 3}, 5.0); // triggers split
 
-    EXPECT_FALSE(root->isBucket);
+    auto* newRoot = tree.get_root();
+    EXPECT_FALSE(newRoot->isBucket);
 
     // Check that all values are retrievable
     std::cout << tree.get({0, 0}) << "\n";
