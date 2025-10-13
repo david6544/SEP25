@@ -31,3 +31,7 @@ Thumbs.db
 .idea/
 *.sublime-project
 *.sublime
+
+# For visualisation files
+*.png
+visualisationImages/*
