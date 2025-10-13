@@ -4,8 +4,13 @@ _deps/
 /build-windows/
 CMakeCache.txt
 CMakeFiles/
+
+# Python virtual environments
+env/
+venv/
 .venv/
 *.venv/
+*__pycache__/
 
 # Compiled files
 *.o
