@@ -116,7 +116,7 @@ cd ./src/visualisation/
 ```
 4. Run the script
 ```bash
-python3 -m main
+python3 -m main [filename (e.g. PerformanceData2:50)]
 ```
 
 This will save a visualisation of the ground truth, along with your predictions within ./visualisationImages

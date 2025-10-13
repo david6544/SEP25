@@ -123,41 +123,48 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         plt.close()
 
     elif dimensions == 3:
-        # 3D Visualization: 2D heatmap with slider
-        fig, ax = plt.subplots(figsize=(10, 8))
+        # 3D Visualization: 3D Surface plot with slider for Z dimension
+        fig = plt.figure(figsize=(12, 9))
         plt.subplots_adjust(bottom=0.15)
+        ax = fig.add_subplot(111, projection="3d")
 
-        # Initial slice
-        initial_slice = stateSpace.shape[0] // 2
+        # Initial slice through Z dimension
+        initial_slice = stateSpace.shape[2] // 2
 
-        # Display initial slice
-        im = ax.imshow(
-            stateSpace[initial_slice, :, :],
-            cmap="viridis",
-            aspect="auto",
-            origin="lower",
-            interpolation="nearest",
+        # Create meshgrid for X and Y
+        x = np.arange(stateSpace.shape[1])
+        y = np.arange(stateSpace.shape[0])
+        X, Y = np.meshgrid(x, y)
+
+        # Get the slice data - this will be the Z height
+        Z_data = stateSpace[:, :, initial_slice]
+
+        # Plot surface - Z position is the slice data, color is also from slice data
+        surf = ax.plot_surface(
+            X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.9
         )
 
-        # Colorbar
-        cbar = plt.colorbar(im, ax=ax)
+        # Add colorbar
+        cbar = fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
         cbar.set_label("Value", fontsize=11)
 
-        # Labels
+        # Labels and title
         ax.set_xlabel("X Axis", fontsize=11)
         ax.set_ylabel("Y Axis", fontsize=11)
+        ax.set_zlabel("Value", fontsize=11)
         ax.set_title(
-            f"3D State Space - Slice {initial_slice}/{stateSpace.shape[0]-1}\n{file_name}",
+            f"3D State Space Surface Plot - Z Dimension = {initial_slice}\n{file_name}",
             fontsize=14,
+            pad=20,
         )
 
-        # Create slider
+        # Create slider for Z dimension
         ax_slider = plt.axes([0.15, 0.05, 0.7, 0.03])
         slider = Slider(
             ax_slider,
-            "Z Slice",
+            "Z Dimension",
             0,
-            stateSpace.shape[0] - 1,
+            stateSpace.shape[2] - 1,
             valinit=initial_slice,
             valstep=1,
         )
@@ -165,26 +172,37 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         # Update function for slider
         def update(val):
             slice_idx = int(slider.val)
-            im.set_data(stateSpace[slice_idx, :, :])
+            Z_data = stateSpace[:, :, slice_idx]
 
-            # Update color limits if needed
-            vmin = stateSpace[slice_idx, :, :].min()
-            vmax = stateSpace[slice_idx, :, :].max()
-            im.set_clim(vmin, vmax)
-
-            ax.set_title(
-                f"3D State Space - Slice {slice_idx}/{stateSpace.shape[0]-1}\n{file_name}",
-                fontsize=14,
+            # Clear and redraw the surface
+            ax.clear()
+            surf = ax.plot_surface(
+                X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.9
             )
+
+            # Re-add labels
+            ax.set_xlabel("X Axis", fontsize=11)
+            ax.set_ylabel("Y Axis", fontsize=11)
+            ax.set_zlabel("Value", fontsize=11)
+            ax.set_title(
+                f"3D State Space Surface Plot - Z Dimension = {slice_idx}\n{file_name}",
+                fontsize=14,
+                pad=20,
+            )
+
             fig.canvas.draw_idle()
 
         slider.on_changed(update)
 
+        plt.tight_layout()
+
         # Save with specific filename (saves the initial slice)
-        output_path = os.path.join(output_dir, f"{base_name}_3d_slice.png")
+        output_path = os.path.join(output_dir, f"{base_name}_3d_surface.png")
         plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"Saved visualization to: {output_path}")
-        plt.close()
+
+        # Show interactive plot
+        plt.show()
 
     else:
         raise ValueError(
