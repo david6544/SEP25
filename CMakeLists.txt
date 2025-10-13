@@ -116,3 +116,26 @@ if(MINGW)
     message(STATUS "Building with MinGW, enabling static linking")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 endif()
+
+# --- DOXYGEN DOCUMENTATION ---
+find_package(Doxygen QUIET)
+
+if(DOXYGEN_FOUND)
+    # Canonical Doxyfile is stored in the repo root
+    set(DOXYGEN_IN ${CMAKE_SOURCE_DIR}/Doxyfile)
+
+    # Developers can make their own local ./docs directory for output
+    # Output is inside the current build dir unless overridden in Doxyfile
+    set(DOXYGEN_OUT ${CMAKE_BINARY_DIR}/docs)
+
+    add_custom_target(docs
+        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_IN}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM
+    )
+else()
+    message(WARNING "Doxygen not found. 'docs' target will be unavailable.")
+endif()
+
+
