@@ -22,6 +22,9 @@ class GEKModel : public Model {
     double theta = 0.01;
     bool trained = false;
     std::mt19937 gen;
+    // local neighbourhood settings
+    bool use_local_neighborhood = true;
+    int local_k = 64; // number of nearest observed points to use for local solves
 public:
     GEKModel(int dimensions, int dimensionSize, int totalQueries);
     ~GEKModel();
