@@ -4,6 +4,7 @@ from matplotlib.widgets import Slider
 from mpl_toolkits.mplot3d import Axes3D
 import os
 import glob
+import argparse
 
 
 def loadAndParse(file_path, dimensions):
@@ -222,42 +223,38 @@ def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None
     visualizeData(stateSpace, predictions=None, file_name=file_name)
 
 
-import os
-import glob
-import argparse
-
-
 def main():
     parser = argparse.ArgumentParser(description="Visualize state space data.")
     parser.add_argument(
         "--functionFilepath",
         type=str,
-        help="Path to the main function data file (e.g., Ackley/Ackley-1250.txt)",
-    )
-    parser.add_argument(
-        "--predictionFilepath",
-        type=str,
-        default=None,
-        help="Optional path to prediction data file.",
-    )
-    parser.add_argument(
-        "--dimensionSize",
-        type=int,
-        default=None,
-        help="Number of dimensions in the state space (1, 2, or 3).",
+        help="Path to the main function data directory (e.g., PerformanceData2:50)",
     )
 
     args = parser.parse_args()
 
-    # If user provided a function file path, run directly
+    # Determine base path
     if args.functionFilepath:
-        print(f"Running single file: {args.functionFilepath}")
-        run(args.functionFilepath, args.predictionFilepath, args.dimensionSize or 2)
-        return
+        base_path = os.path.join("../../", args.functionFilepath)
+    else:
+        base_path = "../../PerformanceData2:50"
 
-    # Otherwise, use the default behavior
-    base_path = "../../PerformanceData2:50"
+    # --- Extract dimensions from base_path ---
+    try:
+        # Find the substring between the last non-digit and the colon
+        # e.g. "../../PerformanceData2:50" -> extract "2"
+        before_colon = base_path.split(":")[0]
+        dims_str = "".join(ch for ch in before_colon if ch.isdigit())
+        if not dims_str:
+            raise ValueError("No dimension number found before ':' in base path.")
+        dimensions = int(dims_str[-1])  # Use last digit in case of multi-digit folders
+    except Exception as e:
+        print(f"⚠️ Could not extract dimensions from base path: {e}")
+        dimensions = 2  # Default fallback
 
+    print(f"📐 Extracted dimensions: {dimensions}")
+
+    # --- Continue with visualization process ---
     if os.path.exists(base_path):
         function_dirs = [
             d
@@ -277,23 +274,12 @@ def main():
 
             for file_path in sorted(txt_files):
                 try:
-                    # Read first line or assume 2D (you can implement actual reading logic)
-                    file_dims = 2
-
-                    if file_dims == 2:
-                        print(f"\nVisualizing: {os.path.basename(file_path)}")
-                        run(file_path, dimensions=file_dims)
-                    else:
-                        print(
-                            f"Skipping {os.path.basename(file_path)} (dimensions: {file_dims})"
-                        )
-
+                    print(f"\nVisualizing: {os.path.basename(file_path)}")
+                    run(file_path, dimensions=dimensions)
                 except Exception as e:
                     print(f"Error processing {file_path}: {e}")
     else:
         print(f"Base path not found: {base_path}")
-        print("Running single example instead...")
-        run("../../PerformanceData2:50/Ackley/Ackley-1250.txt")
 
 
 if __name__ == "__main__":
