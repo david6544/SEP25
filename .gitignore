@@ -5,8 +5,17 @@ _deps/
 CMakeCache.txt
 CMakeFiles/
 
+# Python virtual environments
+env/
+venv/
+.venv/
+*.venv/
+*/__pycache__/
+__pycache__/
+
 # Performance Data
 /PerformanceData*
+*/PerformanceData*
 
 # Compiled files
 *.o
@@ -25,3 +34,7 @@ Thumbs.db
 .idea/
 *.sublime-project
 *.sublime
+
+# For visualisation files
+*.png
+visualisationImages/*

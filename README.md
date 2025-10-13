@@ -91,3 +91,32 @@ For development, you can use the following commands:
    ```bash
    cmake --build build && ./build/sep25_tests
    ```
+
+### Visualiser
+
+Once you have run the performance tests and selected `true` for outputToFile, you will be able to run the visualiser on your model. To do this, complete the following steps:
+
+Note that the following steps assume you are in the home directory `/SEP25`.
+
+1. Create a virtual environment:
+```bash
+python3 -m venv .venv
+```
+which can then be activated with
+```bash
+source .venv/bin/activate
+```
+2. Install requirements:
+```bash
+pip install -r requirements.txt
+```
+3. Navigate to visualiser folder
+```bash
+cd ./src/visualisation/
+```
+4. Run the script
+```bash
+python3 -m main
+```
+
+This will save a visualisation of the ground truth, along with your predictions within ./visualisationImages
