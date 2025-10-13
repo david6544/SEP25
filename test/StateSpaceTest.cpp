@@ -240,8 +240,9 @@ TEST(TestKDTreeStateSpace, TestBucketValueUpdateWorks) {
 }
 
 TEST(TestKDTreeStateSpace, TestBucketSplitPreservesAllValues) {
-    // 2D, dimensionSize=4 => threshold=4
+    // 2D, dimensions=2 => dimensionSize=4
     KDTreeStateSpace tree(2, 4);
+    // 2D, dimensionSize=4 => totalPoints=16 => threshold=4
 
     // Force root into bucket mode
     tree.insert({0, 0}, 1.0);
