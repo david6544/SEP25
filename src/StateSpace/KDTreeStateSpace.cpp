@@ -87,10 +87,13 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
 
         // Insert new leaf into bucket
         TreeNode* newNode = new TreeNode(coords, value, axis);
+        std::cout << "Inserting into bucket at node " << coordsToString(node->coords)
+                  << ": new point " << coordsToString(coords) << "\n";
+        std::cout << "Bucket size before insert: " << node->bucket.size() << "\n";
         node->bucket.push_back(newNode);
         leafNodes.insert(newNode); // bucket entries are leaves
 
-        if (node->bucket.size() > static_cast<size_t>(this->bucketSizeThreshold) &&
+        if (node->bucket.size() >= static_cast<size_t>(this->bucketSizeThreshold) &&
             node->bucket.size() >= 2) // need at least 2 points to split sensibly
         {
             // 1) Choose split axis by largest range
