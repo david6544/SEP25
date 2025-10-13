@@ -72,6 +72,7 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
     // Create new node (base case)
     if (!node) {
         TreeNode* newNode = new TreeNode(coords, value, axis);
+        newNode->isBucket = true; // start as bucket node
         leafNodes.insert(newNode);
         return newNode;
     }

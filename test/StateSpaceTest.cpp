@@ -248,12 +248,11 @@ TEST(TestKDTreeStateSpace, TestBucketSplitPreservesAllValues) {
     tree.insert({0, 0}, 1.0);
     auto* root = tree.get_root();
 
-    EXPECT_FALSE(root->isBucket);
+    EXPECT_TRUE(root->isBucket);
 
     // Insert multiple points to exceed threshold and force split
     tree.insert({1, 1}, 2.0);
     EXPECT_TRUE(root->isBucket);
-    std::cout << tree.get({0, 0}) << "\n";
     tree.insert({2, 2}, 3.0);
     tree.insert({3, 3}, 4.0);
     tree.insert({0, 3}, 5.0); // triggers split
