@@ -2,18 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import dataInput as i
- 
-# create a random dataset
-#n = 500   
-#d = 3
-#data = np.random.rand(n, d + 1)
 
-#x_inputs = data[:, :d]   
-#y_output = data[:, d]   
+# create a random dataset
+# n = 500
+# d = 3
+# data = np.random.rand(n, d + 1)
+
+# x_inputs = data[:, :d]
+# y_output = data[:, d]
 
 # get data
 d = 3
-x_inputs, y_output = i.load_data("/home/archi/SEP25/Ackley-1000.txt", d)
+x_inputs, y_output = i.load_data("../../Ackley-1000.txt", d)
 n, d = x_inputs.shape
 
 
@@ -27,7 +27,7 @@ slice_tolerance = 0.1
 # calc mask
 def makeMask(slider_values):
     mask = np.ones(len(x_inputs), dtype=bool)
-    for i, val in enumerate(slider_values, start=3):  
+    for i, val in enumerate(slider_values, start=3):
         mask &= np.abs(x_inputs[:, i] - val) < slice_tolerance
     return mask
 
@@ -48,17 +48,21 @@ if d == 1:
     ax.set_title("1D n Elements")
 
 elif d == 2:
-    ax = fig.add_subplot(projection = "3d")
-    sc = ax.scatter(x_inputs[mask, 0], x_inputs[mask, 1], 
-                    y_output[mask])
+    ax = fig.add_subplot(projection="3d")
+    sc = ax.scatter(x_inputs[mask, 0], x_inputs[mask, 1], y_output[mask])
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_title("2D n Elements")
 
-elif d == 3:  
-    ax = fig.add_subplot(111, projection= "3d" )
-    sc = ax.scatter(x_inputs[mask, 0], x_inputs[mask, 1], x_inputs[mask, 2], 
-                    c=y_output[mask], cmap=colour_map)
+elif d == 3:
+    ax = fig.add_subplot(111, projection="3d")
+    sc = ax.scatter(
+        x_inputs[mask, 0],
+        x_inputs[mask, 1],
+        x_inputs[mask, 2],
+        c=y_output[mask],
+        cmap=colour_map,
+    )
     ax.set_xlabel("X1")
     ax.set_ylabel("X2")
     ax.set_zlabel("X3")
@@ -70,18 +74,18 @@ else:
 
 
 # make sliders for every input dimension beyond the first three
-#sliders = []
-#if d > 3:
+# sliders = []
+# if d > 3:
 #    plt.subplots_adjust(bottom=0.05 * (d - 3) + 0.15)
 #    for i in range(3, d):
 #        ax_slider = plt.axes([0.2, 0.05 * (i - 3) + 0.05, 0.6, 0.03])
-#        slider = Slider(ax_slider, f"X{i+1}", 0.0, 1.0, 
+#        slider = Slider(ax_slider, f"X{i+1}", 0.0, 1.0,
 #                        valinit=0.5, valstep=0.01)
 #        sliders.append(slider)
 
 
 # update the picture whenever a slider is moved
-#def updatePlot(val):
+# def updatePlot(val):
 #    slider_vals = [s.val for s in sliders] if sliders else []
 #    mask = makeMask(slider_vals)
 
@@ -99,10 +103,10 @@ else:
 
 
 # connect each slider to the update function
-#for s in sliders:
+# for s in sliders:
 #    s.on_changed(updatePlot)
 
 # show the finished plot
-#plt.show()
+# plt.show()
 
 plt.savefig("output.png")
