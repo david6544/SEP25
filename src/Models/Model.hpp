@@ -4,7 +4,7 @@
 
 class Model {
 protected:
-    int dimensions, dimensionSize, totalQueries, currentQuery;
+    int dimensions, dimensionSize, totalQueries, currentQuery = 0;
 public:
         Model(int dimensions, int dimensionSize, int totalQueries): 
             totalQueries(totalQueries), dimensions(dimensions), dimensionSize(dimensionSize) {};
