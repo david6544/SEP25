@@ -226,8 +226,10 @@ def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None
 def main():
     parser = argparse.ArgumentParser(description="Visualize state space data.")
     parser.add_argument(
-        "--functionFilepath",
+        "functionFilepath",
+        nargs="?",
         type=str,
+        default=None,
         help="Path to the main function data directory (e.g., PerformanceData2:50)",
     )
 
@@ -249,12 +251,12 @@ def main():
             raise ValueError("No dimension number found before ':' in base path.")
         dimensions = int(dims_str[-1])  # Use last digit in case of multi-digit folders
     except Exception as e:
-        print(f"⚠️ Could not extract dimensions from base path: {e}")
+        print(f"Could not extract dimensions from base path: {e}")
         dimensions = 2  # Default fallback
 
-    print(f"📐 Extracted dimensions: {dimensions}")
+    print(f"Extracted dimensions: {dimensions}")
 
-    # --- Continue with visualization process ---
+    # Process each function directory
     if os.path.exists(base_path):
         function_dirs = [
             d
