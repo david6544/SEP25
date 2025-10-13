@@ -102,6 +102,7 @@ For creating local documentation, please use the following commands once you hav
    cmake --build . --target docs
    ```
 To open the documentation, navigate to the index.html file and open it locally on your browser.
+
 ### Visualiser
 
 Once you have run the performance tests and selected `true` for outputToFile, you will be able to run the visualiser on your model. To do this, complete the following steps:
