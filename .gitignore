@@ -16,8 +16,6 @@ __pycache__/
 # Performance Data
 /PerformanceData*
 */PerformanceData*
-# Specific case
-PerformanceData2:50/
 
 # Compiled files
 *.o
