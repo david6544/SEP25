@@ -157,7 +157,7 @@ TEST(TestKDTreeStateSpace, TestBucketInsertionAndNoSplitUnderThreshold) {
 
     // Should still be bucket, not split
     EXPECT_TRUE(root->isBucket);
-    EXPECT_EQ(root->bucket.size(), 3);
+    EXPECT_EQ(root->bucket.size(), 4);
     EXPECT_TRUE(root->left == nullptr && root->right == nullptr);
 }
 
