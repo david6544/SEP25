@@ -99,6 +99,8 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
             // Choose split axis by largest range
             int bestAxis = 0;
             int maxRange = -1;
+            // Push node into its own bucket temporarily to consider all points
+            node->bucket.push_back(new TreeNode(node->coords, node->value, node->axis));
             for (int d = 0; d < dimensions; ++d) {
                 int minVal = node->bucket[0]->coords[d];
                 int maxVal = node->bucket[0]->coords[d];
