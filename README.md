@@ -109,12 +109,9 @@ Once you have run the performance tests and selected `true` for outputToFile, yo
 
 Note that the following steps assume you are in the home directory `/SEP25`.
 
-1. Create a virtual environment:
+1. Create a virtual environment and activate it:
 ```bash
 python3 -m venv .venv
-```
-which can then be activated with
-```bash
 source .venv/bin/activate
 ```
 2. Install requirements:
@@ -123,11 +120,11 @@ pip install -r requirements.txt
 ```
 3. Navigate to visualiser folder
 ```bash
-cd ./src/visualisation/
+cd ./performanceTester/visualisation/
 ```
 4. Run the script
 ```bash
 python3 -m main [filename (e.g. PerformanceData2:50)]
 ```
 
-This will save a visualisation of the ground truth, along with your predictions within ./visualisationImages
+This will save a visualisation of the ground truth, along with your predictions within `./visualisationImages`. Also note that the current implementation requires the file to contain the dimension size prior to the `:` symbol. 
