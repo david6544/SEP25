@@ -12,7 +12,8 @@
 GEKModel::GEKModel(int dimensions, int dimensionSize, int totalQueries) :
     Model(dimensions, dimensionSize, totalQueries),
     stateSpace(std::make_unique<ArrayStateSpace>(dimensions, dimensionSize)),
-    gen(std::random_device{}())
+    gen(std::random_device{}()),
+    periodic_dims(dimensions, false) // by default, no dimensions are periodic
 {
     currentQuery = 0;
 }
@@ -188,12 +189,35 @@ double GEKModel::get_value_at(const std::vector<int>& query) {
 }
 
 double GEKModel::covariance(const std::vector<int>& x, const std::vector<int>& y) {
+    double dist = compute_periodic_distance_squared(x, y);
+    return exp(-theta * dist);
+}
+
+double GEKModel::compute_periodic_distance_squared(const std::vector<int>& x, const std::vector<int>& y) {
     double dist = 0.0;
     for(size_t i = 0; i < x.size(); i++) {
-        double d = x[i] - y[i];
+        double d = double(x[i]) - double(y[i]);
+        // If this dimension is periodic, use shortest wraparound distance
+        if (i < periodic_dims.size() && periodic_dims[i]) {
+            // For a periodic dimension of size N, the shortest distance is min(|d|, N - |d|)
+            double abs_d = std::abs(d);
+            double wrap_d = dimensionSize - abs_d;
+            d = std::min(abs_d, wrap_d);
+        }
         dist += d * d;
     }
-    return exp(-theta * dist);
+    return dist;
+}
+
+void GEKModel::set_periodic_dimensions(const std::vector<bool>& periodic) {
+    if (periodic.size() != static_cast<size_t>(dimensions)) {
+        throw std::invalid_argument("periodic_dims size must match number of dimensions");
+    }
+    periodic_dims = periodic;
+    // If model is already trained, need to retrain with new distance metric
+    if (trained) {
+        train();
+    }
 }
 
 void GEKModel::train() {

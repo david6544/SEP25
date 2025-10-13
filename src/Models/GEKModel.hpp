@@ -25,14 +25,20 @@ class GEKModel : public Model {
     // local neighbourhood settings
     bool use_local_neighborhood = true;
     int local_k = 64; // number of nearest observed points to use for local solves
+    // cylindrical/periodic dimension settings
+    std::vector<bool> periodic_dims; // which dimensions have periodic boundary conditions
 public:
     GEKModel(int dimensions, int dimensionSize, int totalQueries);
     ~GEKModel();
     std::vector<int> get_next_query() override;
     void update_prediction(const std::vector<int> &query, double result) override;
     double get_value_at(const std::vector<int> &query) override;
+    
+    // Configure which dimensions are periodic (for cylindrical state spaces)
+    void set_periodic_dimensions(const std::vector<bool>& periodic);
 private:
     double covariance(const std::vector<int>& x, const std::vector<int>& y);
+    double compute_periodic_distance_squared(const std::vector<int>& x, const std::vector<int>& y);
     void train();
     std::vector<int> get_random_query();
     double get_variance(const std::vector<int>& query);
