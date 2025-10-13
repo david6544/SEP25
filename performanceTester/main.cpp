@@ -153,7 +153,9 @@ int main(int argc, char* argv[]) {
     int dimensions = std::atoi(argv[1]);
     int dimensionSize = std::atoi(argv[2]);
 
+    testfunctions::minMaxCache.clear();
     testfunctions::dimSize = dimensionSize;
+    testfunctions::dims = dimensions;
 
     bool outputStateSpace = false;
     if (argc >= 4) {
