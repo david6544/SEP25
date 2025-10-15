@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import Patch
 import os
 import glob
 import argparse
@@ -60,8 +61,8 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
     Visualize state space data based on dimensionality.
 
     Args:
-        stateSpace: NumPy array of state space data
-        predictions: Optional prediction data (not used in this implementation)
+        stateSpace: NumPy array of state space data (predictions)
+        predictions: NumPy array of ground truth data (None if not overlaying)
         file_name: Name of the file being visualized (for title)
     """
     dimensions = stateSpace.ndim
@@ -74,10 +75,19 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
     base_name = os.path.splitext(file_name)[0]
 
     if dimensions == 1:
-        # 1D Visualization: Line plot
+        # 1D Visualization: Line plot with overlay
         plt.figure(figsize=(10, 6))
         x = np.arange(len(stateSpace))
-        plt.plot(x, stateSpace, "b-", linewidth=2)
+        
+        # Plot predictions (stateSpace) as main line
+        plt.plot(x, stateSpace, "b-", label="Predictions", linewidth=2, alpha=0.7)
+        
+        # Plot ground truth if available
+        if predictions is not None and len(predictions) == len(stateSpace):
+            pred_x = np.arange(len(predictions))
+            plt.plot(pred_x, predictions, "r--", label="Ground Truth", linewidth=2, alpha=0.7)
+            plt.legend(fontsize=11)
+        
         plt.xlabel("Index", fontsize=12)
         plt.ylabel("Value", fontsize=12)
         plt.title(f"1D State Space Visualization\n{file_name}", fontsize=14)
@@ -91,7 +101,7 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         plt.close()
 
     elif dimensions == 2:
-        # 2D Visualization: 3D Surface plot
+        # 2D Visualization: 3D Surface plot with overlay
         fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, projection="3d")
 
@@ -100,13 +110,25 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         y = np.arange(stateSpace.shape[0])
         X, Y = np.meshgrid(x, y)
 
-        # Plot surface
+        # Plot ground truth surface if available
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            surf_truth = ax.plot_surface(
+                X, Y, predictions, cmap="Reds", edgecolor="none", alpha=0.5, label="Ground Truth"
+            )
+        
+        # Plot prediction surface (main data)
         surf = ax.plot_surface(
-            X, Y, stateSpace, cmap="viridis", edgecolor="none", alpha=0.9
+            X, Y, stateSpace, cmap="viridis", edgecolor="none", alpha=0.7, label="Predictions"
         )
 
         # Add colorbar
-        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
+        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5, label="Prediction Value")
+
+        # Create custom legend
+        legend_elements = [Patch(facecolor='#440154', alpha=0.7, label='Predictions')]
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            legend_elements.append(Patch(facecolor='red', alpha=0.5, label='Ground Truth'))
+        ax.legend(handles=legend_elements, loc='upper right')
 
         # Labels and title
         ax.set_xlabel("X Axis", fontsize=11)
@@ -136,17 +158,30 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         y = np.arange(stateSpace.shape[0])
         X, Y = np.meshgrid(x, y)
 
-        # Get the slice data - this will be the Z height
+        # Get the slice data for predictions
         Z_data = stateSpace[:, :, initial_slice]
 
-        # Plot surface - Z position is the slice data, color is also from slice data
+        # Plot ground truth surface if available
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            Z_truth = predictions[:, :, initial_slice]
+            surf_truth = ax.plot_surface(
+                X, Y, Z_truth, cmap="Reds", edgecolor="none", alpha=0.5
+            )
+
+        # Plot prediction surface
         surf = ax.plot_surface(
-            X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.9
+            X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.7
         )
 
         # Add colorbar
         cbar = fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
-        cbar.set_label("Value", fontsize=11)
+        cbar.set_label("Prediction Value", fontsize=11)
+
+        # Create custom legend
+        legend_elements = [Patch(facecolor='#440154', alpha=0.7, label='Predictions')]
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            legend_elements.append(Patch(facecolor='red', alpha=0.5, label='Ground Truth'))
+        ax.legend(handles=legend_elements, loc='upper right')
 
         # Labels and title
         ax.set_xlabel("X Axis", fontsize=11)
@@ -174,11 +209,26 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
             slice_idx = int(slider.val)
             Z_data = stateSpace[:, :, slice_idx]
 
-            # Clear and redraw the surface
+            # Clear and redraw the surfaces
             ax.clear()
+            
+            # Plot ground truth if available
+            if predictions is not None and predictions.shape == stateSpace.shape:
+                Z_truth = predictions[:, :, slice_idx]
+                surf_truth = ax.plot_surface(
+                    X, Y, Z_truth, cmap="Reds", edgecolor="none", alpha=0.5
+                )
+            
+            # Plot predictions
             surf = ax.plot_surface(
-                X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.9
+                X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.7
             )
+
+            # Re-add legend
+            legend_elements = [Patch(facecolor='#440154', alpha=0.7, label='Predictions')]
+            if predictions is not None and predictions.shape == stateSpace.shape:
+                legend_elements.append(Patch(facecolor='red', alpha=0.5, label='Ground Truth'))
+            ax.legend(handles=legend_elements, loc='upper right')
 
             # Re-add labels
             ax.set_xlabel("X Axis", fontsize=11)
@@ -208,9 +258,9 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         raise ValueError(
             f"Cannot visualize {dimensions}D data. Only 1D, 2D, and 3D supported."
         )
+    
 
-
-def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None:
+def run(functionPath: str, predictPath: str = None, dimensions: int = 2, overlay_mode: bool = False) -> None:
     """
     Main execution function to load and visualize state space data.
 
@@ -218,12 +268,28 @@ def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None
         functionPath: Path to the input data file
         predictPath: Optional path to prediction data (not implemented)
         dimensions: Expected number of dimensions (will be overridden by file content)
+        overlay_mode: 1 = no overlay (default), 2 = overlay ground truth with predictions
     """
     # Check if file exists
     if not os.path.exists(functionPath):
         raise FileNotFoundError(f"File not found: {functionPath}")
 
     print(f"Loading data from: {functionPath}")
+
+    # Determine if we should load ground truth based on overlay_mode
+    truthSpace = None
+    if overlay_mode == True:
+        # Get ground truth file.
+        ground_truth_file = func + ".txt" if (func := functionPath.split("-")[0])[-3:] != "txt" else None
+        print(f"Ground truth file: {ground_truth_file}")
+        
+        if ground_truth_file and os.path.exists(ground_truth_file):
+            truthSpace, _ = loadAndParse(ground_truth_file, dimensions)
+            print(f"Ground truth loaded for overlay")
+        else:
+            print(f"Ground truth file not found or invalid, proceeding without overlay")
+    else:
+        print(f"Overlay mode disabled (mode={overlay_mode})")
 
     # Load and parse the data
     stateSpace, actual_dimensions = loadAndParse(functionPath, dimensions)
@@ -238,7 +304,7 @@ def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None
     file_name = os.path.basename(functionPath)
 
     # Visualize the data
-    visualizeData(stateSpace, predictions=None, file_name=file_name)
+    visualizeData(stateSpace, predictions=truthSpace, file_name=file_name)
 
 
 def main():
@@ -250,6 +316,13 @@ def main():
         default=None,
         help="Path to the main function data directory (e.g., PerformanceData2:50)",
     )
+    parser.add_argument(
+        "overlay_mode",
+        nargs="?",
+        type=bool,
+        default=False,
+        help="Overlay mode: False = no overlay (default), True = overlay ground truth with predictions",
+    )
 
     args = parser.parse_args()
 
@@ -258,6 +331,9 @@ def main():
         base_path = os.path.join("../../", args.functionFilepath)
     else:
         base_path = "../../PerformanceData2:50"
+
+    # Get overlay mode
+    overlay_mode = args.overlay_mode
 
     # --- Extract dimensions from base_path ---
     try:
@@ -273,6 +349,7 @@ def main():
         dimensions = 2  # Default fallback
 
     print(f"Extracted dimensions: {dimensions}")
+    print(f"Overlay mode: {overlay_mode} ({'Enabled' if overlay_mode == 2 else 'Disabled'})")
 
     # Process each function directory
     if os.path.exists(base_path):
@@ -295,7 +372,7 @@ def main():
             for file_path in sorted(txt_files):
                 try:
                     print(f"\nVisualizing: {os.path.basename(file_path)}")
-                    run(file_path, dimensions=dimensions)
+                    run(file_path, dimensions=dimensions, overlay_mode=overlay_mode)
                 except Exception as e:
                     print(f"Error processing {file_path}: {e}")
     else:

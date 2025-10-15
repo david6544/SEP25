@@ -126,5 +126,9 @@ cd ./performanceTester/visualisation/
 ```bash
 python3 -m main [filename (e.g. PerformanceData2:50)]
 ```
+5. Optional: If you want to overlay ground truth onto your prediction, you can run the script with:
+```bash
+python3 -m main [filename (e.g. PerformanceData2:50)] true
+```
 
 This will save a visualisation of the ground truth, along with your predictions within `./visualisationImages`. Also note that the current implementation requires the file to contain the dimension size prior to the `:` symbol. 
