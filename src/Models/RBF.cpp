@@ -117,7 +117,7 @@ void RBFModel::select_kernel_and_params() {
 
     // --- Adaptive kernel selection (robust) ---
     if (D == 2 && rho >= 0.05 && rho <= 0.3)
-        kernel = MQ;           // MQ safer than TPS in competition
+        kernel = MQ;           // MQ safer than TPS in competition // TODO: revisit - use TPS?
     else if (rho >= 0.25)
         kernel = GAUSSIAN;
     else if (rho >= 0.07)
