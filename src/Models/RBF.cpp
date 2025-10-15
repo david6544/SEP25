@@ -86,10 +86,6 @@ void RBFModel::update_prediction(const std::vector<int>& query, double result) {
 
     if (currentQuery == totalQueries) {
         select_kernel_and_params();
-        // For safety, force MQ fallback in 2D until TPS stable
-        if (kernel == TPS && dimensions == 2)
-            kernel = MQ;
-        compute_global_weights();
     }
 }
 
@@ -97,7 +93,7 @@ double RBFModel::get_value_at(const std::vector<int>& query) {
     if (trained()) {
         double y = 0.0;
         for (size_t i = 0; i < sample_coords.size(); ++i)
-            y += weights[i] * phi(euclid(query, sample_coords[i]));
+            y += weights[i] * phi(euclid_scaled(query, sample_coords[i], dimensionSize));
         if (kernel == TPS && tps_affine.size() == (size_t)(dimensions + 1)) {
             y += tps_affine[0];
             for (int d = 0; d < dimensions; ++d)
@@ -114,34 +110,35 @@ double RBFModel::get_value_at(const std::vector<int>& query) {
 // ------------------------------ kernel selection ------------------------------
 void RBFModel::select_kernel_and_params() {
     const int D = dimensions;
-    double rho = budget_ratio();                       // N / K^D
-    double dnn = median_1nn_distance(sample_coords);   // median nearest-neighbour spacing
+    const int K = dimensionSize;
+    double rho = budget_ratio();
+    double dnn = median_1nn_distance(sample_coords, K);
     if (dnn <= 0.0) dnn = 1.0;
 
-    // --- Robust kernel selection ---
+    // --- Adaptive kernel selection (robust) ---
     if (D == 2 && rho >= 0.05 && rho <= 0.3)
-        kernel = TPS;          // 2D smooth surface regime
+        kernel = MQ;           // MQ safer than TPS in competition
     else if (rho >= 0.25)
-        kernel = GAUSSIAN;     // dense sampling (any D)
+        kernel = GAUSSIAN;
     else if (rho >= 0.07)
-        kernel = MQ;           // medium coverage
+        kernel = MQ;
     else
-        kernel = IMQ;          // very sparse regime
+        kernel = IMQ;
 
-    // --- Shape parameter (epsilon) ---
-    epsilon = 1.0 / dnn;
+    // --- Shape parameter (ε) ---
+    epsilon = 0.3 / dnn;   // smoother than 1/dnn
 
     // --- Ridge term (λ) ---
-    lambda = (kernel == TPS ? 0.0 : 1e-10);
+    lambda = (kernel == TPS ? 1e-6 : 1e-8);
 
-    // --- Safety: never crash even if ill-conditioned ---
+    // --- Compute weights with fallback ---
     try {
         compute_global_weights();
     } catch (const std::exception& e) {
         std::cerr << "[RBF] Kernel " << kernel
                   << " failed (" << e.what() << "). Falling back to MQ.\n";
         kernel = MQ;
-        lambda = 1e-8;
+        lambda = 1e-6;
         compute_global_weights();
     }
 }
@@ -149,52 +146,15 @@ void RBFModel::select_kernel_and_params() {
 // ------------------------------ training ------------------------------
 void RBFModel::compute_global_weights() {
     const int N = (int)sample_coords.size();
+    const int K = dimensionSize;
     if (N == 0) return;
 
-    // Handle TPS specially (augmented system)
-    if (kernel == TPS) {
-        int D = dimensions, M = D + 1, A_dim = N + M;
-        std::vector<std::vector<double>> A(A_dim, std::vector<double>(A_dim, 0.0));
-        std::vector<double> b_aug(A_dim, 0.0);
-
-        // Build Φ
-        for (int i = 0; i < N; ++i)
-            for (int j = i; j < N; ++j) {
-                double v = phi(euclid(sample_coords[i], sample_coords[j]));
-                A[i][j] = A[j][i] = v;
-            }
-
-        // Build P (N x (D+1))
-        for (int i = 0; i < N; ++i) {
-            A[i][N] = 1.0;
-            for (int d = 0; d < D; ++d)
-                A[i][N + 1 + d] = (double)sample_coords[i][d];
-        }
-
-        // Bottom block Pᵀ
-        for (int i = 0; i < N; ++i)
-            for (int d = 0; d < M; ++d)
-                A[N + d][i] = A[i][N + d];
-
-        for (int i = 0; i < N; ++i) b_aug[i] = sample_values[i];
-
-        std::vector<double> x(A_dim, 0.0);
-        bool ok = solve_linear_system(A, b_aug, x);
-        if (!ok) throw std::runtime_error("RBF/TPS: augmented linear system failed.");
-
-        weights.assign(N, 0.0);
-        tps_affine.assign(M, 0.0);
-        for (int i = 0; i < N; ++i) weights[i] = x[i];
-        for (int j = 0; j < M; ++j) tps_affine[j] = x[N + j];
-        return;
-    }
-
-    // Non-TPS kernels
     std::vector<std::vector<double>> A(N, std::vector<double>(N, 0.0));
     for (int i = 0; i < N; ++i) {
         A[i][i] = phi(0.0) + lambda;
         for (int j = i + 1; j < N; ++j) {
-            double v = phi(euclid(sample_coords[i], sample_coords[j]));
+            double r = euclid_scaled(sample_coords[i], sample_coords[j], K);
+            double v = phi(r);
             A[i][j] = A[j][i] = v;
         }
     }
@@ -208,34 +168,36 @@ void RBFModel::compute_global_weights() {
 
 // ------------------------------ kernels ------------------------------
 double RBFModel::phi(double r) const {
-    if (kernel == TPS)
-        return (r <= 0.0) ? 0.0 : (r * r) * std::log(r);
     double er = epsilon * r;
     switch (kernel) {
         case GAUSSIAN: return std::exp(-(er * er));
         case MQ:       return std::sqrt(1.0 + (er * er));
         case IMQ:      return 1.0 / std::sqrt(1.0 + (er * er));
+        case TPS:      return (r <= 0.0) ? 0.0 : (r * r) * std::log(r);
         default:       return 0.0;
     }
 }
 
 // ------------------------------ helpers ------------------------------
-double RBFModel::euclid(const std::vector<int>& a, const std::vector<int>& b) {
+double RBFModel::euclid_scaled(const std::vector<int>& a, const std::vector<int>& b, int K) {
     double s = 0.0;
     for (size_t i = 0; i < a.size(); ++i) {
-        double d = double(a[i] - b[i]);
+        double da = (double)a[i] / (K - 1);
+        double db = (double)b[i] / (K - 1);
+        double d = da - db;
         s += d * d;
     }
     return std::sqrt(s);
 }
 
-double RBFModel::median_1nn_distance(const std::vector<std::vector<int>>& X) {
+double RBFModel::median_1nn_distance(const std::vector<std::vector<int>>& X, int K) {
     const int N = (int)X.size();
     if (N <= 1) return 1.0;
     std::vector<double> nn(N, std::numeric_limits<double>::infinity());
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
-            if (i != j) nn[i] = std::min(nn[i], euclid(X[i], X[j]));
+            if (i != j)
+                nn[i] = std::min(nn[i], euclid_scaled(X[i], X[j], K));
     std::sort(nn.begin(), nn.end());
     return (N % 2) ? nn[N/2] : 0.5 * (nn[N/2 - 1] + nn[N/2]);
 }
@@ -261,7 +223,7 @@ bool RBFModel::solve_linear_system(std::vector<std::vector<double>>& A,
     int n = (int)A.size();
     if (n == 0) return true;
     for (auto& row : A) if ((int)row.size() != n) return false;
-    if ((int)b.size() != n && (int)b.size() != n + (int)A.size() - n) return false;
+    if ((int)b.size() != n) return false;
 
     for (int i = 0; i < n; ++i) A[i].push_back(b[i]);
     for (int col = 0; col < n; ++col) {

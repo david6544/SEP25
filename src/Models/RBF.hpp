@@ -33,9 +33,9 @@ private:
     std::vector<double> tps_affine;               // (D+1) coefficients for TPS
 
     // --- RBF params ---
-    KernelType kernel = GAUSSIAN;
-    double epsilon = 1.0;     // shape parameter for Gaussian/MQ/IMQ
-    double lambda  = 0.0;     // ridge term for stability
+    KernelType kernel = MQ;   // MQ as safer default
+    double epsilon = 1.0;
+    double lambda  = 1e-8;
 
     // --- Deduplication ---
     std::unordered_set<std::string> seen_keys;
@@ -50,16 +50,14 @@ private:
     void compute_global_weights();
 
     // --- Math helpers ---
-    static double euclid(const std::vector<int>& a, const std::vector<int>& b);
-    static double median_1nn_distance(const std::vector<std::vector<int>>& X);
+    static double euclid_scaled(const std::vector<int>& a, const std::vector<int>& b, int K);
+    static double median_1nn_distance(const std::vector<std::vector<int>>& X, int K);
     double phi(double r) const;
 
-    // Dense solver
     static bool solve_linear_system(std::vector<std::vector<double>>& A,
                                     std::vector<double>& b,
                                     std::vector<double>& x);
 
-    // Budget / regime helpers
     bool is_dense_sampling() const;
     double budget_ratio() const;
     double pow_int(double base, int exp) const;

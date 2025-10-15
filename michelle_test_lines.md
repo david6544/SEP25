@@ -34,7 +34,6 @@ seq 0.1 0.1 7.0 | ./build/sep25_main_dev 2 10 70
 So `seq 0.1 0.1 7.0` → `0.1, 0.2, 0.3 … 7.0` (exactly 70 numbers).
 
 ```bash
-rm -rf build
 rm -rf build && mkdir -p build && cd build && cmake .. && cmake --build . && cd ..
 ```
 
