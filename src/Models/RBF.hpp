@@ -9,6 +9,8 @@
 #include <cmath>
 #include <stdexcept>
 #include <algorithm>
+#include <unordered_set>
+#include <sstream>
 
 class RBFModel : public Model {
 public:
@@ -27,36 +29,41 @@ private:
     std::vector<double> sample_values;            // size N
     std::vector<double> weights;                  // size N (after training)
 
+    // --- TPS affine term ---
+    std::vector<double> tps_affine;               // (D+1) coefficients for TPS
+
     // --- RBF params ---
     KernelType kernel = GAUSSIAN;
     double epsilon = 1.0;     // shape parameter for Gaussian/MQ/IMQ
-    double lambda  = 0.0;     // tiny ridge if needed for stability (e.g., 1e-10)
+    double lambda  = 0.0;     // ridge term for stability
+
+    // --- Deduplication ---
+    std::unordered_set<std::string> seen_keys;
+    static std::string coords_key(const std::vector<int>& c);
 
     // --- Sampling helpers ---
-    // For dense coverage we generate evenly spaced indices; for sparse we do farthest-point.
     std::vector<int> dense_uniform_query();
     std::vector<int> farthest_point_query();
 
     // --- Training / selection ---
-    void select_kernel_and_params();  // decide kernel, epsilon from D, rho, d_nn
-    void compute_global_weights();    // build Phi and solve (Phi + lambda I) w = f
+    void select_kernel_and_params();
+    void compute_global_weights();
 
     // --- Math helpers ---
     static double euclid(const std::vector<int>& a, const std::vector<int>& b);
     static double median_1nn_distance(const std::vector<std::vector<int>>& X);
     double phi(double r) const;
 
-    // Dense solver (Gaussian elimination with partial pivoting)
+    // Dense solver
     static bool solve_linear_system(std::vector<std::vector<double>>& A,
                                     std::vector<double>& b,
                                     std::vector<double>& x);
 
     // Budget / regime helpers
-    bool is_dense_sampling() const;          // uses rho threshold
-    double budget_ratio() const;             // N / K^D
+    bool is_dense_sampling() const;
+    double budget_ratio() const;
     double pow_int(double base, int exp) const;
 
-    // Utilities
     bool trained() const { return !weights.empty(); }
 };
 
