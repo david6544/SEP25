@@ -24,7 +24,7 @@ class GEKModel : public Model {
     std::mt19937 gen;
     // local neighbourhood settings
     bool use_local_neighborhood = true;
-    int local_k = 128; // number of nearest observed points to use for local solves
+    int local_k = 64; // number of nearest observed points to use for local solves
     // cylindrical/periodic dimension settings
     std::vector<bool> periodic_dims; // which dimensions have periodic boundary conditions
 public:
