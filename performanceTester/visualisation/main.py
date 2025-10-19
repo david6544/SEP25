@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import Patch
 import os
 import glob
 import argparse
@@ -60,8 +61,8 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
     Visualize state space data based on dimensionality.
 
     Args:
-        stateSpace: NumPy array of state space data
-        predictions: Optional prediction data (not used in this implementation)
+        stateSpace: NumPy array of state space data (predictions)
+        predictions: NumPy array of ground truth data (None if not overlaying)
         file_name: Name of the file being visualized (for title)
     """
     dimensions = stateSpace.ndim
@@ -74,10 +75,19 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
     base_name = os.path.splitext(file_name)[0]
 
     if dimensions == 1:
-        # 1D Visualization: Line plot
+        # 1D Visualization: Line plot with overlay
         plt.figure(figsize=(10, 6))
         x = np.arange(len(stateSpace))
-        plt.plot(x, stateSpace, "b-", linewidth=2)
+        
+        # Plot predictions (stateSpace) as main line
+        plt.plot(x, stateSpace, "b-", label="Predictions", linewidth=2, alpha=0.7)
+        
+        # Plot ground truth if available
+        if predictions is not None and len(predictions) == len(stateSpace):
+            pred_x = np.arange(len(predictions))
+            plt.plot(pred_x, predictions, "r--", label="Ground Truth", linewidth=2, alpha=0.7)
+            plt.legend(fontsize=11)
+        
         plt.xlabel("Index", fontsize=12)
         plt.ylabel("Value", fontsize=12)
         plt.title(f"1D State Space Visualization\n{file_name}", fontsize=14)
@@ -91,7 +101,7 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         plt.close()
 
     elif dimensions == 2:
-        # 2D Visualization: 3D Surface plot
+        # 2D Visualization: 3D Surface plot with overlay
         fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, projection="3d")
 
@@ -100,13 +110,25 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         y = np.arange(stateSpace.shape[0])
         X, Y = np.meshgrid(x, y)
 
-        # Plot surface
+        # Plot ground truth surface if available
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            surf_truth = ax.plot_surface(
+                X, Y, predictions, cmap="Reds", edgecolor="none", alpha=0.5, label="Ground Truth"
+            )
+        
+        # Plot prediction surface (main data)
         surf = ax.plot_surface(
-            X, Y, stateSpace, cmap="viridis", edgecolor="none", alpha=0.9
+            X, Y, stateSpace, cmap="viridis", edgecolor="none", alpha=0.7, label="Predictions"
         )
 
         # Add colorbar
-        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
+        fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5, label="Prediction Value")
+
+        # Create custom legend
+        legend_elements = [Patch(facecolor='#440154', alpha=0.7, label='Predictions')]
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            legend_elements.append(Patch(facecolor='red', alpha=0.5, label='Ground Truth'))
+        ax.legend(handles=legend_elements, loc='upper right')
 
         # Labels and title
         ax.set_xlabel("X Axis", fontsize=11)
@@ -123,41 +145,61 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         plt.close()
 
     elif dimensions == 3:
-        # 3D Visualization: 2D heatmap with slider
-        fig, ax = plt.subplots(figsize=(10, 8))
+        # 3D Visualization: 3D Surface plot with slider for Z dimension
+        fig = plt.figure(figsize=(12, 9))
         plt.subplots_adjust(bottom=0.15)
+        ax = fig.add_subplot(111, projection="3d")
 
-        # Initial slice
-        initial_slice = stateSpace.shape[0] // 2
+        # Initial slice through Z dimension
+        initial_slice = stateSpace.shape[2] // 2
 
-        # Display initial slice
-        im = ax.imshow(
-            stateSpace[initial_slice, :, :],
-            cmap="viridis",
-            aspect="auto",
-            origin="lower",
-            interpolation="nearest",
+        # Create meshgrid for X and Y
+        x = np.arange(stateSpace.shape[1])
+        y = np.arange(stateSpace.shape[0])
+        X, Y = np.meshgrid(x, y)
+
+        # Get the slice data for predictions
+        Z_data = stateSpace[:, :, initial_slice]
+
+        # Plot ground truth surface if available
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            Z_truth = predictions[:, :, initial_slice]
+            surf_truth = ax.plot_surface(
+                X, Y, Z_truth, cmap="Reds", edgecolor="none", alpha=0.5
+            )
+
+        # Plot prediction surface
+        surf = ax.plot_surface(
+            X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.7
         )
 
-        # Colorbar
-        cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label("Value", fontsize=11)
+        # Add colorbar
+        cbar = fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
+        cbar.set_label("Prediction Value", fontsize=11)
 
-        # Labels
+        # Create custom legend
+        legend_elements = [Patch(facecolor='#440154', alpha=0.7, label='Predictions')]
+        if predictions is not None and predictions.shape == stateSpace.shape:
+            legend_elements.append(Patch(facecolor='red', alpha=0.5, label='Ground Truth'))
+        ax.legend(handles=legend_elements, loc='upper right')
+
+        # Labels and title
         ax.set_xlabel("X Axis", fontsize=11)
         ax.set_ylabel("Y Axis", fontsize=11)
+        ax.set_zlabel("Value", fontsize=11)
         ax.set_title(
-            f"3D State Space - Slice {initial_slice}/{stateSpace.shape[0]-1}\n{file_name}",
+            f"3D State Space Surface Plot - Z Dimension = {initial_slice}\n{file_name}",
             fontsize=14,
+            pad=20,
         )
 
-        # Create slider
+        # Create slider for Z dimension
         ax_slider = plt.axes([0.15, 0.05, 0.7, 0.03])
         slider = Slider(
             ax_slider,
-            "Z Slice",
+            "Z Dimension",
             0,
-            stateSpace.shape[0] - 1,
+            stateSpace.shape[2] - 1,
             valinit=initial_slice,
             valstep=1,
         )
@@ -165,34 +207,60 @@ def visualizeData(stateSpace, predictions=None, file_name=""):
         # Update function for slider
         def update(val):
             slice_idx = int(slider.val)
-            im.set_data(stateSpace[slice_idx, :, :])
+            Z_data = stateSpace[:, :, slice_idx]
 
-            # Update color limits if needed
-            vmin = stateSpace[slice_idx, :, :].min()
-            vmax = stateSpace[slice_idx, :, :].max()
-            im.set_clim(vmin, vmax)
-
-            ax.set_title(
-                f"3D State Space - Slice {slice_idx}/{stateSpace.shape[0]-1}\n{file_name}",
-                fontsize=14,
+            # Clear and redraw the surfaces
+            ax.clear()
+            
+            # Plot ground truth if available
+            if predictions is not None and predictions.shape == stateSpace.shape:
+                Z_truth = predictions[:, :, slice_idx]
+                surf_truth = ax.plot_surface(
+                    X, Y, Z_truth, cmap="Reds", edgecolor="none", alpha=0.5
+                )
+            
+            # Plot predictions
+            surf = ax.plot_surface(
+                X, Y, Z_data, cmap="viridis", edgecolor="none", alpha=0.7
             )
+
+            # Re-add legend
+            legend_elements = [Patch(facecolor='#440154', alpha=0.7, label='Predictions')]
+            if predictions is not None and predictions.shape == stateSpace.shape:
+                legend_elements.append(Patch(facecolor='red', alpha=0.5, label='Ground Truth'))
+            ax.legend(handles=legend_elements, loc='upper right')
+
+            # Re-add labels
+            ax.set_xlabel("X Axis", fontsize=11)
+            ax.set_ylabel("Y Axis", fontsize=11)
+            ax.set_zlabel("Value", fontsize=11)
+            ax.set_title(
+                f"3D State Space Surface Plot - Z Dimension = {slice_idx}\n{file_name}",
+                fontsize=14,
+                pad=20,
+            )
+
             fig.canvas.draw_idle()
 
         slider.on_changed(update)
 
+        plt.tight_layout()
+
         # Save with specific filename (saves the initial slice)
-        output_path = os.path.join(output_dir, f"{base_name}_3d_slice.png")
+        output_path = os.path.join(output_dir, f"{base_name}_3d_surface.png")
         plt.savefig(output_path, dpi=300, bbox_inches="tight")
         print(f"Saved visualization to: {output_path}")
-        plt.close()
+
+        # Show interactive plot
+        plt.show()
 
     else:
         raise ValueError(
             f"Cannot visualize {dimensions}D data. Only 1D, 2D, and 3D supported."
         )
+    
 
-
-def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None:
+def run(functionPath: str, predictPath: str = None, dimensions: int = 2, overlay_mode: bool = False) -> None:
     """
     Main execution function to load and visualize state space data.
 
@@ -200,12 +268,28 @@ def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None
         functionPath: Path to the input data file
         predictPath: Optional path to prediction data (not implemented)
         dimensions: Expected number of dimensions (will be overridden by file content)
+        overlay_mode: 1 = no overlay (default), 2 = overlay ground truth with predictions
     """
     # Check if file exists
     if not os.path.exists(functionPath):
         raise FileNotFoundError(f"File not found: {functionPath}")
 
     print(f"Loading data from: {functionPath}")
+
+    # Determine if we should load ground truth based on overlay_mode
+    truthSpace = None
+    if overlay_mode == True:
+        # Get ground truth file.
+        ground_truth_file = func + ".txt" if (func := functionPath.split("-")[0])[-3:] != "txt" else None
+        print(f"Ground truth file: {ground_truth_file}")
+        
+        if ground_truth_file and os.path.exists(ground_truth_file):
+            truthSpace, _ = loadAndParse(ground_truth_file, dimensions)
+            print(f"Ground truth loaded for overlay")
+        else:
+            print(f"Ground truth file not found or invalid, proceeding without overlay")
+    else:
+        print(f"Overlay mode disabled (mode={overlay_mode})")
 
     # Load and parse the data
     stateSpace, actual_dimensions = loadAndParse(functionPath, dimensions)
@@ -220,15 +304,24 @@ def run(functionPath: str, predictPath: str = None, dimensions: int = 2) -> None
     file_name = os.path.basename(functionPath)
 
     # Visualize the data
-    visualizeData(stateSpace, predictions=None, file_name=file_name)
+    visualizeData(stateSpace, predictions=truthSpace, file_name=file_name)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize state space data.")
     parser.add_argument(
-        "--functionFilepath",
+        "functionFilepath",
+        nargs="?",
         type=str,
+        default=None,
         help="Path to the main function data directory (e.g., PerformanceData2:50)",
+    )
+    parser.add_argument(
+        "overlay_mode",
+        nargs="?",
+        type=bool,
+        default=False,
+        help="Overlay mode: False = no overlay (default), True = overlay ground truth with predictions",
     )
 
     args = parser.parse_args()
@@ -238,6 +331,9 @@ def main():
         base_path = os.path.join("../../", args.functionFilepath)
     else:
         base_path = "../../PerformanceData2:50"
+
+    # Get overlay mode
+    overlay_mode = args.overlay_mode
 
     # --- Extract dimensions from base_path ---
     try:
@@ -249,12 +345,13 @@ def main():
             raise ValueError("No dimension number found before ':' in base path.")
         dimensions = int(dims_str[-1])  # Use last digit in case of multi-digit folders
     except Exception as e:
-        print(f"⚠️ Could not extract dimensions from base path: {e}")
+        print(f"Could not extract dimensions from base path: {e}")
         dimensions = 2  # Default fallback
 
-    print(f"📐 Extracted dimensions: {dimensions}")
+    print(f"Extracted dimensions: {dimensions}")
+    print(f"Overlay mode: {overlay_mode} ({'Enabled' if overlay_mode == 2 else 'Disabled'})")
 
-    # --- Continue with visualization process ---
+    # Process each function directory
     if os.path.exists(base_path):
         function_dirs = [
             d
@@ -275,7 +372,7 @@ def main():
             for file_path in sorted(txt_files):
                 try:
                     print(f"\nVisualizing: {os.path.basename(file_path)}")
-                    run(file_path, dimensions=dimensions)
+                    run(file_path, dimensions=dimensions, overlay_mode=overlay_mode)
                 except Exception as e:
                     print(f"Error processing {file_path}: {e}")
     else:
