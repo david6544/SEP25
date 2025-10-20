@@ -12,11 +12,12 @@ private:
     static FunctionSpace *stateSpace;
     static std::string name;
     static int queries;
+    static bool stochastic;
     StateSpaceIO() = default;
 
 public:
     static void set_state_space(FunctionSpace& stateSpace, const std::string& name, int quereies);
-    static void set_IO(FunctionSpace& stateSpace, const std::string& name, int quereies);
+    static void set_IO(FunctionSpace& stateSpace, const std::string& name, int quereies, bool stochastic);
     double send_query_recieve_result(const std::vector<int> &query) override;
     void output_state(Model& model) override;
 };
