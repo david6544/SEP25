@@ -137,60 +137,139 @@ TEST(TestKDTreeStateSpace, TestNearestNeighborClosestPoint) {
     EXPECT_DOUBLE_EQ(nn->value, 2.0);
 }
 
-
-// ---------- Bucket depth behavior ----------
-
-TEST(TestKDTreeStateSpace, TestDeepInsertionBuckets) {
-    KDTreeStateSpace tree(3, 10);
-
-    // Force many inserts to reach maxDepth
-    for (int i = 0; i < 100; ++i) {
-        tree.insert({i % 10, (i * 3) % 10, (i * 7) % 10}, i * 1.0);
-    }
-
-    // Ensure get returns correct value for one inserted element
-    EXPECT_DOUBLE_EQ(90.0, tree.get({0, 0, 0})); // default value, might not exist
-    tree.insert({1, 1, 1}, 123.456);
-    EXPECT_DOUBLE_EQ(123.456, tree.get({1, 1, 1}));
-}
-
-
-// ---------- Stress / stability test ----------
-
-TEST(TestKDTreeStateSpace, TestMultipleInsertsAndGets) {
-    KDTreeStateSpace tree(2, 20);
-
-    // Insert grid
-    for (int x = 0; x < 5; ++x) {
-        for (int y = 0; y < 5; ++y) {
-            double val = x * 10 + y;
-            tree.insert({x, y}, val);
-        }
-    }
-
-    // Retrieve values
-    for (int x = 0; x < 5; ++x) {
-        for (int y = 0; y < 5; ++y) {
-            double expected = x * 10 + y;
-            EXPECT_DOUBLE_EQ(expected, tree.get({x, y}));
-        }
-    }
-}
-
-TEST(TestKDTreeStateSpace, LeafMapIntegrity) {
+TEST(TestKDTreeStateSpace, TestBucketInsertionAndNoSplitUnderThreshold) {
+    // For 2D, dimensionSize=4 => totalPoints=16 => log2(16)=4
+    // So bucketSizeThreshold = 4
     KDTreeStateSpace tree(2, 4);
-    EXPECT_TRUE(tree.get_leaves().empty());
+
+    // Insert first node → becomes root
+    tree.insert({1, 1}, 1.0);
+    auto* root = tree.get_root();
+    ASSERT_NE(root, nullptr);
+
+    // Force it into bucket mode for testing
+    root->isBucket = true;
+
+    // Add up to 4 unique points (threshold)
+    tree.insert({2, 2}, 2.0);
+    tree.insert({3, 3}, 3.0);
+    tree.insert({0, 0}, 4.0);
+
+    // Should still be bucket, not split
+    EXPECT_TRUE(root->isBucket);
+    EXPECT_EQ(root->bucket.size(), 4);
+    EXPECT_TRUE(root->left == nullptr && root->right == nullptr);
+}
+
+TEST(TestKDTreeStateSpace, TestBucketTriggersSplitAtThresholdPlusOne) {
+    // 2D, dimensionSize=4 => totalPoints=16 => threshold=4
+    KDTreeStateSpace tree(2, 4);
+
+    // Insert one node, then make it bucket mode
+    tree.insert({1, 1}, 1.0);
+    auto* root = tree.get_root();
+    root->isBucket = true;
+
+    // Insert 4 (exceeds to threshold) — not bucket
+    tree.insert({2, 2}, 2.0);
+    tree.insert({3, 3}, 3.0);
+    tree.insert({0, 0}, 4.0);
+    tree.insert({1, 2}, 5.0);
+
+    auto* newRoot = tree.get_root();
+    ASSERT_NE(newRoot, nullptr);
+    EXPECT_FALSE(newRoot->isBucket);
+    EXPECT_EQ(newRoot->bucket.size(), 0);
+
+    // Insert 5th → exceeds threshold (log2(16)=4) → should trigger split
+    tree.insert({2, 3}, 6.0);
+
+    EXPECT_FALSE(newRoot->isBucket); // now internal node
+    EXPECT_TRUE(newRoot->left != nullptr || newRoot->right != nullptr);
+    EXPECT_TRUE(newRoot->bucket.empty());
+}
+
+TEST(TestKDTreeStateSpace, TestBucketSplitAxisSelection) {
+    // 2D, dimensionSize=8 => totalPoints=64 => threshold=6
+    KDTreeStateSpace tree(2, 8);
+
+    // Insert root and set as bucket
+    tree.insert({1, 5}, 1.0);
+    auto* root = tree.get_root();
+    root->isBucket = true;
+
+    // Insert points that vary only along x-axis
+    tree.insert({9, 5}, 2.0);
+    tree.insert({5, 5}, 3.0);
+    tree.insert({8, 5}, 4.0);
+    tree.insert({6, 5}, 5.0);
+    tree.insert({7, 5}, 6.0);
+
+    // Exceed threshold (6)
+    tree.insert({10, 5}, 7.0);
+
+    // Should have split along axis 0 (x-axis)
+    EXPECT_FALSE(root->isBucket);
+    EXPECT_EQ(root->axis, 0);
+}
+
+TEST(TestKDTreeStateSpace, TestBucketValueUpdateWorks) {
+    // 2D, dimensionSize=4 => threshold=4
+    KDTreeStateSpace tree(2, 4);
 
     tree.insert({1, 1}, 1.0);
-    EXPECT_EQ(tree.get_leaves().size(), 1);
+    auto* root = tree.get_root();
+    root->isBucket = true;
 
-    tree.insert({2, 1}, 2.0);
-    EXPECT_EQ(tree.get_leaves().size(), 1); 
+    // Add two points
+    tree.insert({2, 2}, 2.0);
+    tree.insert({3, 3}, 3.0);
 
-    tree.insert({0, 1}, 3.0);
-    EXPECT_EQ(tree.get_leaves().size(), 2);
+    // Update existing point
+    tree.insert({2, 2}, 9.9);
 
-    tree.insert({2, 2}, 4.0);
+    // Value should have updated, not duplicated
+    int count22 = 0;
+    double val22 = 0.0;
+    for (auto* n : root->bucket) {
+        if (n->coords == std::vector<int>({2, 2})) {
+            val22 = n->value;
+            ++count22;
+        }
+    }
+    EXPECT_EQ(count22, 1);
+    EXPECT_DOUBLE_EQ(val22, 9.9);
+}
 
-    EXPECT_EQ(tree.get_leaves().size(), 2);
+TEST(TestKDTreeStateSpace, TestBucketSplitPreservesAllValues) {
+    // 2D, dimensions=2 => dimensionSize=4
+    KDTreeStateSpace tree(2, 4);
+    // 2D, dimensionSize=4 => totalPoints=16 => threshold=4
+
+    // Force root into bucket mode
+    tree.insert({0, 0}, 1.0);
+    auto* root = tree.get_root();
+
+    EXPECT_TRUE(root->isBucket);
+
+    // Insert multiple points to exceed threshold and force split
+    tree.insert({1, 1}, 2.0);
+    tree.insert({2, 2}, 3.0);
+    tree.insert({3, 3}, 4.0);
+    tree.insert({0, 3}, 5.0); // triggers split
+
+    auto* newRoot = tree.get_root();
+    EXPECT_FALSE(newRoot->isBucket);
+
+    // Check that all values are retrievable
+    std::cout << tree.get({0, 0}) << "\n";
+    std::cout << tree.get({1, 1}) << "\n";
+    std::cout << tree.get({2, 2}) << "\n";
+    std::cout << tree.get({3, 3}) << "\n";
+    std::cout << tree.get({0, 3}) << "\n";
+    EXPECT_DOUBLE_EQ(tree.get({0, 0}), 1.0);
+    EXPECT_DOUBLE_EQ(tree.get({1, 1}), 2.0);
+    EXPECT_DOUBLE_EQ(tree.get({2, 2}), 3.0);
+    EXPECT_DOUBLE_EQ(tree.get({3, 3}), 4.0);
+    EXPECT_DOUBLE_EQ(tree.get({0, 3}), 5.0);
 }

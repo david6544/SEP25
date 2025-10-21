@@ -7,6 +7,9 @@
 #elif defined(TestM)
     #include "../src/Models/TestModel.hpp"
     #define CurrentModel TestModel
+#elif defined(RBF)
+    #include "../src/Models/RBF.hpp"
+    #define CurrentModel RBFModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -155,7 +158,9 @@ int main(int argc, char* argv[]) {
     int dimensions = std::atoi(argv[1]);
     int dimensionSize = std::atoi(argv[2]);
 
+    testfunctions::minMaxCache.clear();
     testfunctions::dimSize = dimensionSize;
+    testfunctions::dims = dimensions;
 
     bool outputStateSpace = false;
     if (argc >= 4) {

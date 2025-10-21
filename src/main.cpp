@@ -12,6 +12,9 @@
 #elif defined(TestM)
     #include "Models/TestModel.hpp"
     #define CurrentModel TestModel
+#elif defined(RBF)
+    #include "Models/RBF.hpp"
+    #define CurrentModel RBFModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif

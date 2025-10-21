@@ -26,12 +26,13 @@ typedef struct Results {
     double realMean = 0.0;
     void updateResults(double actual, double predicted){
         totalSeen++;
-        if (abs(predicted - actual) <= 0.1){
+        if (std::abs(predicted - actual) <= 0.0001) {
             this->correct++;
         }
+
         double error = abs(actual-predicted);
-        sumAbsoluteError += error;
-        sumSquaredError += pow(error, 2);
+        sumAbsoluteError += 100 * error;
+        sumSquaredError += pow(100 * error, 2);
 
         minActual = std::min(minActual, actual);
         maxActual = std::max(maxActual, actual);
