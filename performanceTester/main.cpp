@@ -29,11 +29,11 @@ struct PerfResult {
 };
 
 
-PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace, int queries, SpaceFunctionType func, const std::string& name) {
+PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace, bool stochastic, int queries, SpaceFunctionType func, const std::string& name) {
     
     FunctionSpace fspace(dimensions, dimensionSize, func);
     
-    StateSpaceIO::set_IO(fspace, name, queries);
+    StateSpaceIO::set_IO(fspace, name, queries, stochastic);
     InputOutput* io = InputOutput::get_instance();
 
     CurrentModel model(dimensions, dimensionSize, queries);
@@ -53,7 +53,8 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
 }
 
 // Run model against all functions in testfunctions and output a table
-void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace) {
+void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, bool stochastic) {
+    
     struct FuncInfo {
         SpaceFunctionType func;
         std::string name;
@@ -72,6 +73,11 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace) {
         {testfunctions::hyperEllipsoid, "HyperEllipsoid", "Bowl Function"}
     };
     std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
+    
+    if (stochastic) {
+        queryPercents = {1.5, 2};
+    }
+
     std::cout << std::fixed << std::setprecision(3);
     std::cout << "\nPerformance Table:\n";
     std::cout << "---------------------------------------------------------------------------------------------------------------------------------------------------------------\n";
@@ -93,7 +99,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace) {
             for (int d = 0; d < dimensions; ++d) totalArea *= dimensionSize;
             int queries = std::max(1, static_cast<int>(totalArea * percent));
             auto start = std::chrono::high_resolution_clock::now();
-            PerfResult r = runPerfTest(dimensions, dimensionSize, outputStateSpace, queries, f.func, f.name);
+            PerfResult r = runPerfTest(dimensions, dimensionSize, outputStateSpace, stochastic, queries, f.func, f.name);
             auto end = std::chrono::high_resolution_clock::now();
             double duration = std::chrono::duration<double>(end - start).count();
             std::cout << "| " << std::setw(16) << f.name << " | "
@@ -151,7 +157,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace) {
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] 
-                  << " <dimensions> <dimensionSize> [outputStateSpace]\n";
+                  << " <dimensions> <dimensionSize> [--output shouldOutput] [--rand testStochastic]\n";
         return 1;
     }
 
@@ -163,12 +169,26 @@ int main(int argc, char* argv[]) {
     testfunctions::dims = dimensions;
 
     bool outputStateSpace = false;
-    if (argc >= 4) {
-        std::string opt = argv[3];
-        if (opt == "1" || opt == "true" || opt == "yes") {
-            outputStateSpace = true;
+    bool stochastic = false;
+
+    for (int i = 3; i < argc; i++){
+        std::string opt = argv[i];
+        if (opt == "--output" && i + 1 < argc){
+            opt = argv[i+1];
+            if (opt == "1" || opt == "true" || opt == "yes") {
+                outputStateSpace = true;
+                i++;
+            }
+        }
+
+        if (opt == "--rand" && i + 1 < argc){
+            opt = argv[i+1];
+            if (opt == "1" || opt == "true" || opt == "yes") {
+                std::cout << "true";
+                stochastic = true;
+            }
         }
     }
     testfunctions::dimSize = dimensionSize;
-    runAllFunctions(dimensions, dimensionSize, outputStateSpace);
+    runAllFunctions(dimensions, dimensionSize, outputStateSpace, stochastic);
 }
