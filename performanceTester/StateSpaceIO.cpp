@@ -28,7 +28,7 @@ void StateSpaceIO::set_state_space(FunctionSpace& stateSpace, const std::string&
 
 double StateSpaceIO::send_query_recieve_result(const std::vector<int> &query) {
     double result = stateSpace->get(query);
-    if (stochastic) return rand() < result;
+    if (stochastic) return ((double (rand())) / RAND_MAX) < result;
     return result;
 }
 

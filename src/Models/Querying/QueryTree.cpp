@@ -109,7 +109,6 @@ std::vector<int> QueryTree::get_next_query() {
 
 
 void QueryTree::update_prediction(const std::vector<int>& query, double result) {
-    // Find leaf
     TreeNode* target = nullptr;
     if (nextLeaf.second != nullptr && query == this->nextLeaf.first)
         target = nextLeaf.second;

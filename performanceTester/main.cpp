@@ -10,6 +10,9 @@
 #elif defined(RBF)
     #include "../src/Models/RBF.hpp"
     #define CurrentModel RBFModel
+#elif defined(STOCTREE)
+    #include "../src/Models/StochasticQueryModel.hpp"
+    #define CurrentModel StochasticQueryModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
