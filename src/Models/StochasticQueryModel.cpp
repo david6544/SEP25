@@ -4,15 +4,40 @@
 
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
-    qt = new QueryTree(dimensions, dimensionSize, 10);
-    totalPoints = pow(dimensionSize, dimensions);
-    shouldQuery = totalQueries/(totalPoints/2);
+    
+    shouldQuery = 5;
+    scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
+    scaledSize = floor(dimensionSize * scaleRatio);
+
+    qt = new QueryTree(dimensions, scaledSize, 10);
+    totalPoints = pow(scaledSize, dimensions);
+    
 }
 
 StochasticQueryModel::~StochasticQueryModel(){
     if (this->maper) delete this->maper;
     if (this->qt) delete this->qt;
 }
+
+std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& rawQuery) {
+    std::vector<int> scaled(rawQuery.size());
+    for (size_t i = 0; i < rawQuery.size(); ++i) {
+        scaled[i] = std::min(scaledSize - 1, (int) std::floor(rawQuery[i] * scaleRatio));
+    }
+    return scaled;
+}
+
+std::vector<int> StochasticQueryModel::unscaleCandidate(const std::vector<int>& scaledQuery) {
+    std::vector<int> unscaled(scaledQuery.size());
+    for (size_t i = 0; i < scaledQuery.size(); ++i) {
+        // pick the middle of the interval deterministically
+        double lower = scaledQuery[i] / scaleRatio;
+        double upper = (scaledQuery[i] + 1) / scaleRatio;
+        unscaled[i] = (int) std::floor((lower + upper) / 2.0);
+    }
+    return unscaled;
+}
+
 
 std::vector<int> StochasticQueryModel::get_next_query() {
     currentQuery++;
@@ -29,14 +54,14 @@ std::vector<int> StochasticQueryModel::get_next_query() {
         repeatQueries--;
     }
 
-    return currentQueryPoint;
+    return unscaleCandidate(currentQueryPoint);
 }
 
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     // sanity: if query doesn't match currentQueryPoint, optionally handle it
     // (here we expect they match)
-    if (query != currentQueryPoint) {
-        // Optional: log or handle unexpected mismatch
+    std::vector<int> scaledQuery = lowerResolution(query);
+    if (scaledQuery != currentQueryPoint) {
         std::cerr << "Warning: update_prediction called with non-current query\n";
     }
 
@@ -46,7 +71,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
 
     // When we've collected enough samples for this point, flush them to the map
     if (tCount >= shouldQuery) {
-        auto &currentResults = queryWinTotal[query]; // creates if missing
+        auto &currentResults = queryWinTotal[scaledQuery]; // creates if missing
         if (currentResults.size() < 2) currentResults.assign(2, 0);
 
         // accumulate
@@ -71,11 +96,11 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, p.first);
         }
         if (maper) delete maper;
-        maper = new IDW(data, 0.05 * totalPoints, 2, 0.1 * totalPoints);
+        maper = new IDW(data, 4, 2);
     }
 }
 
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
-    if (maper) return maper->predict(query);
+    if (maper) return maper->predict(lowerResolution(query));
     return 0.0;
 }
