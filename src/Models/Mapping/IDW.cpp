@@ -1,10 +1,11 @@
 #include "IDW.hpp"
 
 
-IDW::IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, int power) : Mapping(data){
+IDW::IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, int power, int offset) : Mapping(data){
     this->knnTree = new KNNTree(this->queriedPoints);
     this->maxNeighbours = maxNeighbours;
     this->power = power;
+    this->offset = offset;
 }
 
 IDW::~IDW(){
@@ -28,9 +29,10 @@ double IDW::predict(std::vector<int> query) {
     for (const auto& pv : relevantPoints) {
         const std::vector<int>& coords = pv.point;
         
-        if (pv.distance < EPS || pv.point == query) return pv.value;
-
-        float weight = 1.0f / std::pow(pv.distance, this->power);
+        if (offset == 0 && (pv.distance < EPS || pv.point == query)) return pv.value;
+        
+        float weight = 1;
+        if (pv.distance > offset) weight = 1.0f / std::pow(pv.distance, this->power);
         numerator += weight * pv.value;
         denominator += weight;
     }

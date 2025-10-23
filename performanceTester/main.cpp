@@ -187,7 +187,6 @@ int main(int argc, char* argv[]) {
         if (opt == "--rand" && i + 1 < argc){
             opt = argv[i+1];
             if (opt == "1" || opt == "true" || opt == "yes") {
-                std::cout << "true";
                 stochastic = true;
             }
         }

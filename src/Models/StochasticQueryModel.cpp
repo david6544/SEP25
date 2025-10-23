@@ -4,7 +4,7 @@
 
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
-    qt = new QueryTree(dimensions, dimensionSize, 15);
+    qt = new QueryTree(dimensions, dimensionSize, 10);
     totalPoints = pow(dimensionSize, dimensions);
     shouldQuery = totalQueries/(totalPoints/2);
 }
@@ -71,7 +71,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, p.first);
         }
         if (maper) delete maper;
-        maper = new IDW(data, 0.01 * totalPoints, 3);
+        maper = new IDW(data, 0.05 * totalPoints, 2, 0.1 * totalPoints);
     }
 }
 
