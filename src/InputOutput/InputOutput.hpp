@@ -16,12 +16,12 @@
 class InputOutput {
 protected:
     static InputOutput* instance;
-    std::vector<int> index_to_coords(int index, int dimensions, int dimensionSize);
     InputOutput();
 public:
     virtual double send_query_recieve_result(const std::vector<int> &query) = 0;
     virtual void output_state(Model &model) = 0;
-    
+
+    static std::vector<int> index_to_coords(int index, int dimensions, int dimensionSize);
     static InputOutput* get_instance();
 };
 

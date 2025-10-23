@@ -9,11 +9,13 @@ using std::cout, std::endl;
 FunctionSpace* StateSpaceIO::stateSpace = nullptr;
 std::string StateSpaceIO::name = "";
 int StateSpaceIO::queries = 0;
+bool StateSpaceIO::stochastic = false;
 
-void StateSpaceIO::set_IO(FunctionSpace& stateSpace, const std::string& name, int queries){
+void StateSpaceIO::set_IO(FunctionSpace& stateSpace, const std::string& name, int queries, bool stochastic){
     StateSpaceIO::stateSpace = &stateSpace;
     StateSpaceIO::name = name;
     StateSpaceIO::queries = queries;
+    StateSpaceIO::stochastic = stochastic;
     if (instance == nullptr)
         instance = new StateSpaceIO;
 }
@@ -26,6 +28,7 @@ void StateSpaceIO::set_state_space(FunctionSpace& stateSpace, const std::string&
 
 double StateSpaceIO::send_query_recieve_result(const std::vector<int> &query) {
     double result = stateSpace->get(query);
+    if (stochastic) return rand() < result;
     return result;
 }
 

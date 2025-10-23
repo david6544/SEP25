@@ -72,7 +72,7 @@ ctest
 ### Running the Performance Tests
 To test the performance of the model, go to `main.cpp` in  `/performanceTester`, edit the parameters and run
 ```
-cmake --build build && ./build/sep25_performance {dimensions} {dimensionSize} [outputToFile (default false)]
+cmake --build build && ./build/sep25_performance {dimensions} {dimensionSize} [--output outputToFile (default false)] [--rand stochastic? (default false)]
 ```
 
 
@@ -102,3 +102,33 @@ For creating local documentation, please use the following commands once you hav
    cmake --build . --target docs
    ```
 To open the documentation, navigate to the index.html file and open it locally on your browser.
+
+### Visualiser
+
+Once you have run the performance tests and selected `true` for outputToFile, you will be able to run the visualiser on your model. To do this, complete the following steps:
+
+Note that the following steps assume you are in the home directory `/SEP25`.
+
+1. Create a virtual environment and activate it:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+2. Install requirements:
+```bash
+pip install -r requirements.txt
+```
+3. Navigate to visualiser folder
+```bash
+cd ./performanceTester/visualisation/
+```
+4. Run the script
+```bash
+python3 -m main [filename (e.g. PerformanceData2:50)]
+```
+5. Optional: If you want to overlay ground truth onto your prediction, you can run the script with:
+```bash
+python3 -m main [filename (e.g. PerformanceData2:50)] true
+```
+
+This will save a visualisation of the ground truth, along with your predictions within `./visualisationImages`. Also note that the current implementation requires the file to contain the dimension size prior to the `:` symbol. 
