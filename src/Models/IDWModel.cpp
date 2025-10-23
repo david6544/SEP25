@@ -31,6 +31,13 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
         evenQueries[q] = query;
     }
     // Shuffle queries to avoid any ordering bias
+    for(auto i : evenQueries){
+        std::cout << "Query: ";
+        for(auto j : i){
+            std::cout << j << " ";
+        }
+        std::cout << std::endl;
+    }
     std::shuffle(evenQueries.begin(), evenQueries.end(), std::mt19937{std::random_device{}()});
 
 }
