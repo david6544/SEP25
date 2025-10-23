@@ -36,6 +36,9 @@ double IDWModel::get_value_at(const std::vector<int> &query) {
     // Use IDW to compute the distance weighted by k nearest neighbors
     const int k = 5;
     auto neighbors = stateSpace->k_nearest_neighbors(query, k);
+    if(stateSpace->get(query) != -1.0){
+        return stateSpace->get(query);
+    }
     if (neighbors.empty()) {
         std::cout << "Neighbors found: " << neighbors.size() << std::endl;
         return 0.0; // No data available

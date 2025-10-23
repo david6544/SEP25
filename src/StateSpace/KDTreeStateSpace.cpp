@@ -187,7 +187,7 @@ double KDTreeStateSpace::get(const std::vector<int>& coords) const {
         return get_recursive(root, coords, 0);
     } catch (std::out_of_range&) {
         // Return default value if not present
-        return 0.0;
+        return -1.0;
     }
 }
 
