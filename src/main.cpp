@@ -11,6 +11,9 @@
 #elif defined(GEK)
     #include "Models/GEKModel.hpp"
     #define CurrentModel GEKModel
+#elif defined(GP)
+    #include "Models/GP.hpp"
+    #define CurrentModel GPModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
