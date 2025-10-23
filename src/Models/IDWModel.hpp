@@ -7,8 +7,9 @@
 
 class IDWModel : public Model {
 protected:
-    int dimensions, dimensionSize, totalQueries, currentQuery = 0;
     KDTreeStateSpace* stateSpace;
+    std::vector<std::vector<int>> evenQueries;
+    int queryIdx = 0;
 public:
         IDWModel(int dimensions, int dimensionSize, int totalQueries);
         int get_dimensions(){ return dimensions; }
