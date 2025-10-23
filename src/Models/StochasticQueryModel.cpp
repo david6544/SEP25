@@ -5,11 +5,11 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    int minQueries = 2;
+    int minQueries = 4;
     scaleRatio = pow(((double) totalQueries)/(minQueries*pow(dimensionSize, dimensions)), 1.0/dimensions);
     scaledSize = floor(dimensionSize * scaleRatio);
 
-    shouldQuery = minQueries * 4;
+    shouldQuery = minQueries * 2;
 
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
@@ -71,11 +71,12 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
     if (result >= 0.9) wCount++;
     tCount++;
 
+    bool shouldSkip = (tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount);
+
     // When we've collected enough samples for this point, flush them to the map
-    if (tCount >= shouldQuery) {
+    if (tCount >= shouldQuery || shouldSkip) {
         auto &currentResults = queryWinTotal[scaledQuery]; // creates if missing
         if (currentResults.size() < 2) currentResults.assign(2, 0);
-
         // accumulate
         currentResults[0] += wCount; // wins
         currentResults[1] += tCount; // trials
@@ -87,6 +88,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         // reset per-point counters so next time we start fresh for new selection
         wCount = 0;
         tCount = 0;
+        repeatQueries = 0;
     }
 
     // When we've processed all overall queries, build the interpolator
@@ -98,8 +100,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, p.first);
         }
         if (maper) delete maper;
-        int c = std::min(10, (int) (0.2 * data.size()));
-        maper = new IDW(data, c, 2, 1.5 * dimensionSize * scaleRatio);
+        int c = std::min(10, (int) (0.1 * data.size()));
+        maper = new IDW(data, c, 3, 1.5 * dimensionSize * scaleRatio);
     }
 }
 
