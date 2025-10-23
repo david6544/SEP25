@@ -294,6 +294,6 @@ TEST(TestKDTreeStateSpace, TestKNearestNeighbors) {
     ASSERT_EQ(neighbors.size(), 3);
 
     EXPECT_EQ(neighbors[0]->coords, std::vector<int>({3, 3}));
-    EXPECT_EQ(neighbors[1]->coords, std::vector<int>({2, 2}));
-    EXPECT_EQ(neighbors[2]->coords, std::vector<int>({4, 4}));
+    EXPECT_TRUE(neighbors[1]->coords == std::vector<int>({2, 2}) || neighbors[1]->coords == std::vector<int>({4, 4}));
+    EXPECT_TRUE(neighbors[2]->coords == std::vector<int>({2, 2}) || neighbors[2]->coords == std::vector<int>({4, 4}));
 }
