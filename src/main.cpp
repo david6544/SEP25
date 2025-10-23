@@ -15,6 +15,9 @@
 #elif defined(RBF)
     #include "Models/RBF.hpp"
     #define CurrentModel RBFModel
+#elif defined(IDW)
+    #include "Models/IDWModel.hpp"
+    #define CurrentModel IDWModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
