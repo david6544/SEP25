@@ -70,9 +70,9 @@ void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int 
         query[index] = i;
         double actualResult = this->get(query);
         double predictedResult = model.get_value_at(query);
-        /* 
-        std::cout << "result: " << actualResult << " - predicted: " << predictedResult << "\n";
-        */
+        
+        // std::cout << "result: " << actualResult << " - predicted: " << predictedResult << "\n";
+        
         this->results.updateResults(actualResult, predictedResult);
         getResultsHelper(model, query, index + 1);
     }

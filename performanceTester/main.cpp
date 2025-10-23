@@ -112,7 +112,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
                       << std::setw(5) << dimensionSize << " | "
                       << std::setw(7) << std::fixed << std::setprecision(0) << percent * 100 << "% |" << std::fixed << std::setprecision(3)
                       << std::setw(10) << r.results.percentCorrect() << " | "
-                      << std::setw(12) << r.results.meanAbsoluteError() << " | "
+                      << std::setw(12) << r.results.meanSquaredError() << " | "
                       << std::setw(12) << r.results.rootMeanSquaredError() << " | "
                       << std::setw(14) << r.results.realMean << " | "
                       << std::setw(14) << r.results.meanPredicted() << " | "
@@ -121,7 +121,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
             auto& stat = stats[f.category];
             stat.category = f.category;
             stat.percentCorrects.push_back(r.results.percentCorrect());
-            stat.mae += r.results.meanAbsoluteError();
+            stat.mae += r.results.meanSquaredError();
             stat.rmse += r.results.rootMeanSquaredError();
             stat.count++;
         }
