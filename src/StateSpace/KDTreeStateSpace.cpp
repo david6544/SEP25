@@ -1,5 +1,8 @@
-#include <algorithm>
+
 #include "KDTreeStateSpace.hpp"
+
+#include <algorithm>
+#include <string>
 
 // Constructor
 KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)

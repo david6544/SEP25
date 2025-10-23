@@ -5,6 +5,9 @@ _deps/
 CMakeCache.txt
 CMakeFiles/
 /docs/
+out/
+.vs/
+CMakeSettings.json
 
 # Python virtual environments
 env/

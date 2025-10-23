@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <cmath>
+#include <vector>
 #include <algorithm>
 #include <functional>
 #include <limits>

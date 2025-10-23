@@ -74,7 +74,7 @@ add_executable(sep25_main src/main.cpp ${SRC_FILES})
 message(STATUS "Selected algorithm: ${ALGORITHM}")
 
 # Add compile definition based on chosen algorithm
-target_compile_definitions(sep25_main PUBLIC ${ALGORITHM})
+target_compile_definitions(sep25_main PUBLIC ${ALGORITHM} _USE_MATH_DEFINES)
 
 target_include_directories(sep25_main PUBLIC ${CMAKE_BINARY_DIR})
 include_directories(SYSTEM ${CMAKE_CXX_STANDARD_LIBRARIES})
@@ -85,7 +85,7 @@ set_target_properties(sep25_main PROPERTIES OUTPUT_NAME "sep25_main_${GIT_COMMIT
 file(GLOB PERFORMANCE_FILES performanceTester/*.cpp)
 add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
 target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
-target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM})
+target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM} _USE_MATH_DEFINES)
 include_directories(${eigen_SOURCE_DIR})
 
 # GoogleTest setup (unchanged)
@@ -109,7 +109,7 @@ FetchContent_MakeAvailable(eigen)
 enable_testing()
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
-target_compile_definitions(sep25_tests PUBLIC "TESTING")
+target_compile_definitions(sep25_tests PUBLIC "TESTING" _USE_MATH_DEFINES)
 include_directories(${eigen_SOURCE_DIR})
 
 # Link GoogleTest
