@@ -1,4 +1,4 @@
-#if defined(IDWModel) || defined(TESTING)
+#if defined(IDW_MODEL) || defined(TESTING)
 #include "IDWModel.hpp"
 
 IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {

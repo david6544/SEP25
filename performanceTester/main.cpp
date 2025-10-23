@@ -10,7 +10,7 @@
 #elif defined(RBF)
     #include "../src/Models/RBF.hpp"
     #define CurrentModel RBFModel
-#elif defined(IDWModel)
+#elif defined(IDW_MODEL)
     #include "../src/Models/IDWModel.hpp"
     #define CurrentModel IDWModel
 #else
