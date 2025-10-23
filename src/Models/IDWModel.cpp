@@ -1,3 +1,4 @@
+#if defined(IDW) || defined(TESTING)
 #include "IDWModel.hpp"
 
 IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {
@@ -47,3 +48,4 @@ double IDWModel::get_value_at(const std::vector<int> &query) {
     }
     return weightedSum / totalWeight;
 }
+#endif // IDW || TESTING
