@@ -1,5 +1,7 @@
 #if defined(IDW_MODEL) || defined(TESTING)
 #include "IDWModel.hpp"
+#include <algorithm>
+#include <random>
 
 IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
     : Model(dimensions, dimensionSize, totalQueries) {
