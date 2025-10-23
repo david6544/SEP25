@@ -41,6 +41,17 @@ private:
                                          int depth,
                                          TreeNode*& bestNode,
                                          double& bestDist) const;
+    void nearest_recursive_k(
+        TreeNode* node,
+        const std::vector<int>& target,
+        int depth,
+        int k,
+        std::priority_queue<
+            std::pair<double, TreeNode*>,
+            std::vector<std::pair<double, TreeNode*>>,
+            std::less<std::pair<double, TreeNode*>>
+        >& bestNeighbors
+    ) const;
     std::string coordsToString(std::vector<int> coords) const;
     
 public:
@@ -56,6 +67,7 @@ public:
 
     TreeNode* get_root();
     KDTreeStateSpace::TreeNode* nearest_neighbor(const std::vector<int>& coords) const;
+    std::vector<KDTreeStateSpace::TreeNode*> k_nearest_neighbors(const std::vector<int>& coords, int k) const;
 
     double squared_distance(const std::vector<int>& a, const std::vector<int>& b) const;
 

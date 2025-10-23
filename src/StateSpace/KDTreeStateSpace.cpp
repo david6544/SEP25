@@ -301,86 +301,86 @@ void KDTreeStateSpace::nearest_recursive(TreeNode* node,
 
 
 
-// std::vector<KDTreeStateSpace::TreeNode*>
-// KDTreeStateSpace::nearest_k_neighbors(const std::vector<int>& coords, int k) const {
-//     if (coords.size() != static_cast<size_t>(dimensions)) {
-//         throw std::invalid_argument("Coordinate dimensionality mismatch");
-//     }
+std::vector<KDTreeStateSpace::TreeNode*>
+KDTreeStateSpace::k_nearest_neighbors(const std::vector<int>& coords, int k) const {
+    if (coords.size() != static_cast<size_t>(dimensions)) {
+        throw std::invalid_argument("Coordinate dimensionality mismatch");
+    }
 
-//     if (!root) return {};
+    if (!root) return {};
 
-//     // Min-heap (largest distance at top)
-//     using Neighbor = std::pair<double, TreeNode*>;
-//     std::priority_queue<
-//         Neighbor,
-//         std::vector<Neighbor>,
-//         std::less<Neighbor>
-//     > bestNeighbors;
+    // Min-heap (largest distance at top)
+    using Neighbor = std::pair<double, TreeNode*>;
+    std::priority_queue<
+        Neighbor,
+        std::vector<Neighbor>,
+        std::less<Neighbor>
+    > bestNeighbors;
 
 
-//     nearest_recursive_k(root, coords, 0, k, bestNeighbors);
+    nearest_recursive_k(root, coords, 0, k, bestNeighbors);
 
-//     // Extract nodes from heap
-//     std::vector<TreeNode*> results;
-//     results.reserve(bestNeighbors.size());
-//     while (!bestNeighbors.empty()) {
-//         results.push_back(bestNeighbors.top().second);
-//         bestNeighbors.pop();
-//     }
+    // Extract nodes from heap
+    std::vector<TreeNode*> results;
+    results.reserve(bestNeighbors.size());
+    while (!bestNeighbors.empty()) {
+        results.push_back(bestNeighbors.top().second);
+        bestNeighbors.pop();
+    }
 
-//     // Reverse so closest is first
-//     std::reverse(results.begin(), results.end());
-//     return results;
-// }
+    // Reverse so closest is first
+    std::reverse(results.begin(), results.end());
+    return results;
+}
 
     
-// void KDTreeStateSpace::nearest_recursive_k(
-//     TreeNode* node,
-//     const std::vector<int>& target,
-//     int depth,
-//     int k,
-//     std::priority_queue<
-//         std::pair<double, TreeNode*>,
-//         std::vector<std::pair<double, TreeNode*>>,
-//         std::less<std::pair<double, TreeNode*>>
-//     >& bestNeighbors
-// ) const {
+void KDTreeStateSpace::nearest_recursive_k(
+    TreeNode* node,
+    const std::vector<int>& target,
+    int depth,
+    int k,
+    std::priority_queue<
+        std::pair<double, TreeNode*>,
+        std::vector<std::pair<double, TreeNode*>>,
+        std::less<std::pair<double, TreeNode*>>
+    >& bestNeighbors
+) const {
 
-//     if (!node) return;
+    if (!node) return;
 
-//     // If bucket node → check all bucket children
-//     if (node->isBucket) {
-//         for (auto* child : node->bucket) {
-//             double dist = squared_distance(target, child->coords);
-//             if (bestNeighbors.size() < (size_t)k) {
-//                 bestNeighbors.emplace(dist, child);
-//             } else if (dist < bestNeighbors.top().first) {
-//                 bestNeighbors.pop();
-//                 bestNeighbors.emplace(dist, child);
-//             }
-//         }
-//         return;
-//     }
+    // If bucket node → check all bucket children
+    if (node->isBucket) {
+        for (auto* child : node->bucket) {
+            double dist = squared_distance(target, child->coords);
+            if (bestNeighbors.size() < (size_t)k) {
+                bestNeighbors.emplace(dist, child);
+            } else if (dist < bestNeighbors.top().first) {
+                bestNeighbors.pop();
+                bestNeighbors.emplace(dist, child);
+            }
+        }
+        return;
+    }
 
-//     // Distance to current node
-//     double dist = squared_distance(target, node->coords);
-//     if (bestNeighbors.size() < (size_t)k) {
-//         bestNeighbors.emplace(dist, node);
-//     } else if (dist < bestNeighbors.top().first) {
-//         bestNeighbors.pop();
-//         bestNeighbors.emplace(dist, node);
-//     }
+    // Distance to current node
+    double dist = squared_distance(target, node->coords);
+    if (bestNeighbors.size() < (size_t)k) {
+        bestNeighbors.emplace(dist, node);
+    } else if (dist < bestNeighbors.top().first) {
+        bestNeighbors.pop();
+        bestNeighbors.emplace(dist, node);
+    }
 
-//     int axis = depth % dimensions;
-//     TreeNode* near = (target[axis] < node->coords[axis]) ? node->left : node->right;
-//     TreeNode* far  = (target[axis] < node->coords[axis]) ? node->right : node->left;
+    int axis = depth % dimensions;
+    TreeNode* near = (target[axis] < node->coords[axis]) ? node->left : node->right;
+    TreeNode* far  = (target[axis] < node->coords[axis]) ? node->right : node->left;
 
-//     // Explore near branch first
-//     nearest_recursive_k(near, target, depth + 1, k, bestNeighbors);
+    // Explore near branch first
+    nearest_recursive_k(near, target, depth + 1, k, bestNeighbors);
 
-//     // Check if far branch might contain closer neighbors
-//     double diff = static_cast<double>(target[axis] - node->coords[axis]);
-//     if (bestNeighbors.size() < (size_t)k || diff * diff < bestNeighbors.top().first) {
-//         nearest_recursive_k(far, target, depth + 1, k, bestNeighbors);
-//     }
-// }
+    // Check if far branch might contain closer neighbors
+    double diff = static_cast<double>(target[axis] - node->coords[axis]);
+    if (bestNeighbors.size() < (size_t)k || diff * diff < bestNeighbors.top().first) {
+        nearest_recursive_k(far, target, depth + 1, k, bestNeighbors);
+    }
+}

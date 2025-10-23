@@ -273,3 +273,27 @@ TEST(TestKDTreeStateSpace, TestBucketSplitPreservesAllValues) {
     EXPECT_DOUBLE_EQ(tree.get({3, 3}), 4.0);
     EXPECT_DOUBLE_EQ(tree.get({0, 3}), 5.0);
 }
+
+TEST(TestKDTreeStateSpace, TestNearestNeighborInEmptyTree) {
+    KDTreeStateSpace tree(2, 10);
+
+    // Nearest neighbor in empty tree should return empty vector
+    auto nn = tree.k_nearest_neighbors({1, 1}, 1);
+    EXPECT_EQ(nn.size(), 0);
+}
+
+TEST(TestKDTreeStateSpace, TestKNearestNeighbors) {
+    KDTreeStateSpace tree(2, 10);
+    tree.insert({1, 1}, 1.0);
+    tree.insert({2, 2}, 2.0);
+    tree.insert({3, 3}, 3.0);
+    tree.insert({4, 4}, 4.0);
+    tree.insert({5, 5}, 5.0);
+
+    auto neighbors = tree.k_nearest_neighbors({3, 3}, 3);
+    ASSERT_EQ(neighbors.size(), 3);
+
+    EXPECT_EQ(neighbors[0]->coords, std::vector<int>({3, 3}));
+    EXPECT_EQ(neighbors[1]->coords, std::vector<int>({2, 2}));
+    EXPECT_EQ(neighbors[2]->coords, std::vector<int>({4, 4}));
+}
