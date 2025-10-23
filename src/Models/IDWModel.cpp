@@ -5,42 +5,37 @@
 
 IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
     : Model(dimensions, dimensionSize, totalQueries) {
-    
+
     this->stateSpace = new KDTreeStateSpace(dimensions, dimensionSize);
-    this->evenQueries = std::vector<std::vector<int>>(totalQueries);
+    this->evenQueries.reserve(totalQueries);
 
-    // Determine roughly how many points per dimension
+    // Number of evenly spaced points per dimension
     int pointsPerDim = static_cast<int>(std::round(std::pow(totalQueries, 1.0 / dimensions)));
-
-    // Compute step size to cover the full state space evenly
     double step = (dimensionSize - 1.0) / std::max(1, pointsPerDim - 1);
 
-    // Precompute evenly spaced queries
-    for (int q = 0; q < totalQueries; ++q) {
+    // Build the grid recursively or by counting up in base pointsPerDim
+    for (int i = 0; i < std::pow(pointsPerDim, dimensions) && (int)evenQueries.size() < totalQueries; ++i) {
         std::vector<int> query(dimensions);
-        int temp = q;
-
+        int idx = i;
         for (int d = 0; d < dimensions; ++d) {
-            int idx = temp % pointsPerDim;
-            temp /= pointsPerDim;
-
-            // Scale evenly across the entire dimension range
-            query[d] = static_cast<int>(std::round(idx * step));
+            int coordIndex = idx % pointsPerDim;
+            idx /= pointsPerDim;
+            query[d] = static_cast<int>(std::round(coordIndex * step));
         }
+        evenQueries.push_back(query);
+    }
 
-        evenQueries[q] = query;
-    }
-    // Shuffle queries to avoid any ordering bias
-    for(auto i : evenQueries){
-        std::cout << "Query: ";
-        for(auto j : i){
-            std::cout << j << " ";
-        }
-        std::cout << std::endl;
-    }
+    // Optional: randomize to avoid spatial bias
     std::shuffle(evenQueries.begin(), evenQueries.end(), std::mt19937{std::random_device{}()});
 
+    // Debug print (optional)
+    for (auto &q : evenQueries) {
+        std::cout << "Query: ";
+        for (auto v : q) std::cout << v << " ";
+        std::cout << "\n";
+    }
 }
+
 
 
 std::vector<int> IDWModel::get_next_query() {
