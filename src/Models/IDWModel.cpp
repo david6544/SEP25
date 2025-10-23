@@ -7,45 +7,64 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
     : Model(dimensions, dimensionSize, totalQueries) {
 
     this->stateSpace = new KDTreeStateSpace(dimensions, dimensionSize);
+    this->evenQueries.clear();
     this->evenQueries.reserve(totalQueries);
 
-    // Number of evenly spaced points per dimension
-    int pointsPerDim = static_cast<int>(std::round(std::pow(totalQueries, 1.0 / dimensions)));
-    double step = (dimensionSize - 1.0) / std::max(1, pointsPerDim - 1);
+    // Ensure we pick enough points per dimension so that pointsPerDim^dimensions >= totalQueries
+    int pointsPerDim = static_cast<int>(std::ceil(std::pow((double)totalQueries, 1.0 / dimensions)));
+    // compute max combinations safely as integer power
+    long long maxCombos = 1;
+    for (int i = 0; i < dimensions; ++i) {
+        maxCombos *= pointsPerDim;
+        if (maxCombos > (long long)totalQueries * 10) break; // avoid huge loops
+    }
 
-    // Build the grid recursively or by counting up in base pointsPerDim
-    for (int i = 0; i < std::pow(pointsPerDim, dimensions) && (int)evenQueries.size() < totalQueries; ++i) {
-        std::vector<int> query(dimensions);
-        int idx = i;
+    // step: avoid divide-by-zero; if pointsPerDim==1 then only coordinate 0 is used
+    double denom = std::max(1, pointsPerDim - 1);
+    double step = (dimensionSize - 1.0) / denom;
+
+    // Enumerate grid in base pointsPerDim; stop when we've collected exactly totalQueries
+    for (long long i = 0; i < maxCombos && (int)evenQueries.size() < totalQueries; ++i) {
+        std::vector<int> q(dimensions);
+        long long idx = i;
         for (int d = 0; d < dimensions; ++d) {
             int coordIndex = idx % pointsPerDim;
             idx /= pointsPerDim;
-            query[d] = static_cast<int>(std::round(coordIndex * step));
+            // scale to [0, dimensionSize-1] using step — clamp to be safe
+            int coord = static_cast<int>(std::round(coordIndex * step));
+            coord = std::max(0, std::min(dimensionSize - 1, coord));
+            q[d] = coord;
         }
-        evenQueries.push_back(query);
+        evenQueries.push_back(q);
     }
 
-    // Optional: randomize to avoid spatial bias
-    std::shuffle(evenQueries.begin(), evenQueries.end(), std::mt19937{std::random_device{}()});
+    // If we still don't have enough (rare), fill remaining with random valid points
+    std::mt19937 rng((unsigned)std::random_device{}());
+    std::uniform_int_distribution<int> unif(0, dimensionSize - 1);
+    while ((int)evenQueries.size() < totalQueries) {
+        std::vector<int> q(dimensions);
+        for (int d = 0; d < dimensions; ++d) q[d] = unif(rng);
+        evenQueries.push_back(q);
+    }
 
-    // Debug print (optional)
-    for (auto &q : evenQueries) {
+    for (const auto &qq : evenQueries) {
         std::cout << "Query: ";
-        for (auto v : q) std::cout << v << " ";
+        for (int v : qq) std::cout << v << " ";
         std::cout << "\n";
     }
+    // Shuffle insertion order to avoid spatial bias when building KD-tree
+    std::shuffle(evenQueries.begin(), evenQueries.end(), rng);
+
 }
 
-
-
+// Safe get_next_query: check evenQueries.size(), not totalQueries
 std::vector<int> IDWModel::get_next_query() {
-    if (queryIdx < totalQueries) {
-        std::vector<int> query = this->evenQueries[queryIdx++];
-        return query;
+    if (queryIdx < (int)evenQueries.size()) {
+        return evenQueries[queryIdx++];
     }
-
-    return std::vector<int>();
+    return std::vector<int>(dimensions, 0); // Fallback (should not happen)
 }
+
 
 
 
