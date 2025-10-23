@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <random>
 
 using std::cout, std::endl;
 
@@ -26,9 +27,11 @@ void StateSpaceIO::set_state_space(FunctionSpace& stateSpace, const std::string&
     StateSpaceIO::queries = queries;
 }
 
+static std::default_random_engine gen(std::random_device{}());
+static std::uniform_real_distribution<double> dist(0.0, 1.0);
 double StateSpaceIO::send_query_recieve_result(const std::vector<int> &query) {
     double result = stateSpace->get(query);
-    if (stochastic) return rand() < result;
+    if (stochastic) return dist(gen) <= result;
     return result;
 }
 
