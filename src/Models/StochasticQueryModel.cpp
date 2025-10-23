@@ -5,11 +5,11 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    int minQueries = 5;
+    int minQueries = 2;
     scaleRatio = pow(((double) totalQueries)/(minQueries*pow(dimensionSize, dimensions)), 1.0/dimensions);
     scaledSize = floor(dimensionSize * scaleRatio);
 
-    shouldQuery = minQueries * 2;
+    shouldQuery = minQueries * 4;
 
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
@@ -99,7 +99,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         }
         if (maper) delete maper;
         int c = std::min(10, (int) (0.2 * data.size()));
-        maper = new IDW(data, c, 2, dimensionSize * scaleRatio);
+        maper = new IDW(data, c, 2, 1.5 * dimensionSize * scaleRatio);
     }
 }
 
