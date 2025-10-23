@@ -18,9 +18,8 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(
 
 std::vector<int> IDWModel::get_next_query() {
     if (queryIdx < totalQueries) {
-        std::vector<int> query = evenQueries[queryIdx++];
-        if(queryIdx <= totalQueries)
-        return evenQueries[queryIdx++];
+        std::vector<int> query = this->evenQueries[queryIdx++];
+        return query;
     }
 
     return std::vector<int>();
