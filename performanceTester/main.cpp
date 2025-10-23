@@ -75,7 +75,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
         {testfunctions::rosenbrock, "Rosenbrock", "Valley Function"},
         {testfunctions::hyperEllipsoid, "HyperEllipsoid", "Bowl Function"}
     };
-    std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
+    std::vector<double> queryPercents = {0.3};
     
     if (stochastic) {
         queryPercents = {1.5, 2};

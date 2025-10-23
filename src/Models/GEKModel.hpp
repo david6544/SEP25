@@ -3,47 +3,42 @@
 #define GEK_MODEL_H
 
 #include "Model.hpp"
-#include "../StateSpace/ArrayStateSpace.hpp"
+#include "Querying/QueryTree.hpp"
+#include "Mapping/GEKMapping.hpp"
 #include <memory>
 #include <vector>
-#include <random>
-#include <Eigen/Dense>
 
 /**
- * @brief The GEKModel is for implementing Gradient-ehanced Kriging,
- *  which is a form of guassian process regression, 
- * this will try to be enhanced through an observation matrix
+ * @brief The GEKModel implements Gradient-Enhanced Kriging optimization.
+ * 
+ * It uses QueryTree for intelligent query selection and GEKMapping for
+ * Gaussian process regression-based interpolation.
  */
 class GEKModel : public Model {
-    std::unique_ptr<ArrayStateSpace> stateSpace;
-    std::vector<std::vector<int>> observed_queries;
-    std::vector<double> observed_values;
-    Eigen::MatrixXd C_inv;
-    double theta = 0.01;
-    bool trained = false;
-    std::mt19937 gen;
-    // local neighbourhood settings
-    bool use_local_neighborhood = true;
-    int local_k = 64; // number of nearest observed points to use for local solves
-    // cylindrical/periodic dimension settings
-    std::vector<bool> periodic_dims; // which dimensions have periodic boundary conditions
 public:
     GEKModel(int dimensions, int dimensionSize, int totalQueries);
     ~GEKModel();
+    
     std::vector<int> get_next_query() override;
     void update_prediction(const std::vector<int> &query, double result) override;
     double get_value_at(const std::vector<int> &query) override;
     
-    // Configure which dimensions are periodic (for cylindrical state spaces)
+    /**
+     * @brief Configure which dimensions have periodic boundary conditions
+     * 
+     * @param periodic Vector of booleans indicating which dimensions are periodic
+     */
     void set_periodic_dimensions(const std::vector<bool>& periodic);
+
 private:
-    double covariance(const std::vector<int>& x, const std::vector<int>& y);
-    double compute_periodic_distance_squared(const std::vector<int>& x, const std::vector<int>& y);
-    void train();
-    std::vector<int> get_random_query();
-    double get_variance(const std::vector<int>& query);
+    QueryTree* queryTree;
+    GEKMapping* mapping;
+    std::vector<std::pair<double, std::vector<int>>> data;
+    int leafSize;
+    bool use_local_neighborhood;
+    int local_k;
+    std::vector<bool> periodic_dims;
 };
 
-
-#endif //GEK_MODE_H
+#endif //GEK_MODEL_H
 #endif // GEK || TESTING
