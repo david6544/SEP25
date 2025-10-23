@@ -1,18 +1,31 @@
 #if defined(IDW_MODEL) || defined(TESTING)
 #include "IDWModel.hpp"
 
-IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(dimensions, dimensionSize, totalQueries) {
+IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
+    : Model(dimensions, dimensionSize, totalQueries) {
+    
     this->stateSpace = new KDTreeStateSpace(dimensions, dimensionSize);
     this->evenQueries = std::vector<std::vector<int>>(totalQueries);
-    // Precompute even queries
+
+    // Determine roughly how many points per dimension
+    int pointsPerDim = static_cast<int>(std::round(std::pow(totalQueries, 1.0 / dimensions)));
+
+    // Compute step size to cover the full state space evenly
+    double step = (dimensionSize - 1.0) / std::max(1, pointsPerDim - 1);
+
+    // Precompute evenly spaced queries
     for (int q = 0; q < totalQueries; ++q) {
-        int pointsPerDim = static_cast<int>(std::round(std::pow(totalQueries, 1.0 / dimensions)));
         std::vector<int> query(dimensions);
         int temp = q;
+
         for (int d = 0; d < dimensions; ++d) {
-            query[d] = temp % pointsPerDim;
+            int idx = temp % pointsPerDim;
             temp /= pointsPerDim;
+
+            // Scale evenly across the entire dimension range
+            query[d] = static_cast<int>(std::round(idx * step));
         }
+
         evenQueries[q] = query;
     }
 }
