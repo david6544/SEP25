@@ -6,11 +6,12 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries) : Model(
     this->evenQueries = std::vector<std::vector<int>>(totalQueries);
     // Precompute even queries
     for (int q = 0; q < totalQueries; ++q) {
+        int pointsPerDim = static_cast<int>(std::round(std::pow(totalQueries, 1.0 / dimensions)));
         std::vector<int> query(dimensions);
-        double step = ((double)(dimensionSize - 1)) / (double)totalQueries;
+        int temp = q;
         for (int d = 0; d < dimensions; ++d) {
-            double vard = step / 2.0 + ((double)q) * step;
-            query[d] = static_cast<int>(std::round(vard));
+            query[d] = temp % pointsPerDim;
+            temp /= pointsPerDim;
         }
         evenQueries[q] = query;
     }
@@ -36,13 +37,15 @@ double IDWModel::get_value_at(const std::vector<int> &query) {
     const int k = 5;
     auto neighbors = stateSpace->k_nearest_neighbors(query, k);
     if (neighbors.empty()) {
+        std::cout << "Neighbors found: " << neighbors.size() << std::endl;
         return 0.0; // No data available
     }
     double weightedSum = 0.0;
     double totalWeight = 0.0;
     for (const auto& neighbor : neighbors) {
-        double distance = stateSpace->squared_distance(query, neighbor->coords);
-        double weight = 1.0 / (distance * distance + 1e-6); // IDW weight
+        double dist2 = stateSpace->squared_distance(query, neighbor->coords);
+        double weight = 1.0 / (dist2 + 1e-6);  // no double squaring
+
         weightedSum += weight * neighbor->value;
         totalWeight += weight;
     }
