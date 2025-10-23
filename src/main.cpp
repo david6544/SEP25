@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 
 #include "InputOutput/CommandLineInputOutput.hpp"
 
@@ -8,6 +9,12 @@
 #elif defined(DUMB)
     #include "Models/DumbModel.hpp"
     #define CurrentModel DumbModel
+#elif defined(TestM)
+    #include "Models/TestModel.hpp"
+    #define CurrentModel TestModel
+#elif defined(RBF)
+    #include "Models/RBF.hpp"
+    #define CurrentModel RBFModel
 #elif defined(GEK)
     #include "Models/GEKModel.hpp"
     #define CurrentModel GEKModel
