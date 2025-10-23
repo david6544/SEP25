@@ -1,4 +1,4 @@
-#if defined(IDW) || defined(TESTING)
+#if defined(IDWModel) || defined(TESTING)
 #ifndef IDWMODEL_H
 #define IDWMODEL_H
 

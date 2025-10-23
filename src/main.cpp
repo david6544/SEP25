@@ -15,7 +15,7 @@
 #elif defined(RBF)
     #include "Models/RBF.hpp"
     #define CurrentModel RBFModel
-#elif defined(IDW)
+#elif defined(IDWModel)
     #include "Models/IDWModel.hpp"
     #define CurrentModel IDWModel
 #else
