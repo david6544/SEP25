@@ -1,4 +1,5 @@
 #include "StochasticQueryModel.hpp"
+#include "../InputOutput/InputOutput.hpp"
 
 
 
@@ -8,10 +9,22 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     shouldQuery = 5;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     scaledSize = floor(dimensionSize * scaleRatio);
-    shouldQuery = 2 * 5;
+    shouldQuery = 4 * shouldQuery;
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
     
+    precomputedBounds.resize(scaledSize);
+    const double invScale = 1.0 / scaleRatio;
+
+    for (int s = 0; s < scaledSize; ++s) {
+        int lo = static_cast<int>(std::ceil(s * invScale));
+        int hi = static_cast<int>(std::ceil((s + 1) * invScale)) - 1;
+        lo = std::clamp(lo, 0, dimensionSize - 1);
+        hi = std::clamp(hi, 0, dimensionSize - 1);
+        precomputedBounds[s] = { lo, hi };
+    }
+    precomputedBounds[0].first = 0;
+    precomputedBounds[scaledSize-1].second = dimensionSize;
 }
 
 StochasticQueryModel::~StochasticQueryModel(){
@@ -19,7 +32,7 @@ StochasticQueryModel::~StochasticQueryModel(){
     if (this->qt) delete this->qt;
 }
 
-std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& rawQuery) {
+std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& rawQuery) const {
     std::vector<int> scaled(rawQuery.size());
     double invScale = 1.0 / scaleRatio;
 
@@ -39,36 +52,16 @@ std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& r
     return scaled;
 }
 
-
-std::vector<std::pair<int,int>> StochasticQueryModel::get_unscaled_int_bounds(const std::vector<int>& scaledQuery) const {
-    std::vector<std::pair<int,int>> bounds;
-    bounds.reserve(scaledQuery.size());
-    double invScale = 1.0 / scaleRatio;
-
-    for (size_t i = 0; i < scaledQuery.size(); ++i) {
-        int s = scaledQuery[i];
-        int lo = static_cast<int>(std::ceil(s * invScale));
-        int hi = static_cast<int>(std::ceil((s + 1) * invScale)) - 1;
-        lo = std::clamp(lo, 0, dimensionSize - 1);
-        hi = std::clamp(hi, 0, dimensionSize - 1);
-        bounds.emplace_back(lo, hi);
-    }
-    return bounds;
-}
-
-
-std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const std::vector<int>& scaledQuery) {
+std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const std::vector<int>& scaledQuery) const{
     std::vector<int> result(scaledQuery.size());
     double invScale = 1.0 / scaleRatio;
     static thread_local std::mt19937_64 rng(std::random_device{}());
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
         int s = scaledQuery[i];
-        int lo = static_cast<int>(std::ceil(s * invScale));
-        int hi = static_cast<int>(std::ceil((s + 1) * invScale)) - 1;
 
-        lo = std::clamp(lo, 0, dimensionSize - 1);
-        hi = std::clamp(hi, 0, dimensionSize - 1);
+        int lo = std::clamp(precomputedBounds[s].first, 0, dimensionSize - 1);
+        int hi = std::clamp(precomputedBounds[s].second, 0, dimensionSize - 1);
 
         if (lo < hi) {
             std::uniform_int_distribution<int> dist(lo, hi);
@@ -96,12 +89,21 @@ std::vector<int> StochasticQueryModel::unscale_midpoint(const std::vector<int>& 
     return unscaled;
 }
 
+inline int linear_index(const std::vector<int>& coords, int scaledSize) {
+    int idx = 0;
+    for (size_t d = 0; d < coords.size(); ++d) {
+        idx = idx * scaledSize + coords[d];
+    }
+    return idx;
+}
+
 std::vector<int> StochasticQueryModel::get_next_query() {
     currentQuery++;
 
     if (repeatQueries == 0) {
         // new point chosen
         currentQueryPoint = qt->get_next_query();
+        currentQueryIDX = linear_index(currentQueryPoint, scaledSize);
         repeatQueries = shouldQuery;
         // reset per-point counters
         wCount = 0;
@@ -114,14 +116,8 @@ std::vector<int> StochasticQueryModel::get_next_query() {
     return sample_unscaled_point_from_scaled(currentQueryPoint);
 }
 
-void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
-    // sanity: if query doesn't match currentQueryPoint, optionally handle it
-    // (here we expect they match)
-    std::vector<int> scaledQuery = lowerResolution(query);
-    if (scaledQuery != currentQueryPoint) {
-        std::cerr << "Warning: update_prediction called with non-current query\n";
-    }
 
+void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     // increment per-point counters
     if (result >= 0.9) wCount++;
     tCount++;
@@ -129,8 +125,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
     bool shouldSkip = (tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount);
 
     // When we've collected enough samples for this point, flush them to the map
-    if (tCount >= shouldQuery || shouldSkip) {
-        auto &currentResults = queryWinTotal[scaledQuery]; // creates if missing
+    if (tCount >= shouldQuery || shouldSkip || currentQuery == totalQueries) {
+        auto &currentResults = queryWinTotal[currentQueryIDX]; // creates if missing
         if (currentResults.size() < 2) currentResults.assign(2, 0);
         // accumulate
         currentResults[0] += wCount; // wins
@@ -138,7 +134,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
 
         double currentProb = double(currentResults[0]) / currentResults[1];
         // update the tree with the aggregated probability
-        qt->update_prediction(query, currentProb);
+        qt->update_prediction(currentQueryPoint, currentProb);
 
         // reset per-point counters so next time we start fresh for new selection
         wCount = 0;
@@ -152,11 +148,11 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         for (auto &p : queryWinTotal) {
             if (p.second[1] == 0) continue;
             double prob = double(p.second[0]) / p.second[1];
-            data.emplace_back(prob, unscale_midpoint(p.first));
+            data.emplace_back(prob, unscale_midpoint(InputOutput::index_to_coords(p.first, dimensions, scaledSize)));
         }
         if (maper) delete maper;
         double neigh = std::max(5.0, 0.005 * totalPoints);
-        maper = new IDW(data, neigh, 2, 0.1);
+        maper = new IDW(data, neigh, 1, 0.1);
     }
 }
 

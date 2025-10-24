@@ -5,18 +5,7 @@
 
 #include <unordered_map>
 #include <vector>
-#include <functional> // for std::hash
-
-// Custom hash function for vector<int>
-struct vectorhash {
-    std::size_t operator()(const std::vector<int>& v) const {
-        std::size_t seed = v.size();
-        for (auto& i : v) {
-            seed ^= std::hash<int>{}(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        }
-        return seed;
-    }
-};
+#include <functional>
 
 class StochasticQueryModel : public Model {
 public:
@@ -35,13 +24,16 @@ private:
     int wCount = 0, tCount = 0;
     double scaleRatio = 1;
     int scaledSize = 1;
+
+    int currentQueryIDX;
     std::vector<int> currentQueryPoint;
 
-    // Change from std::map to std::unordered_map using vectorhash
-    std::unordered_map<std::vector<int>, std::vector<int>, vectorhash> queryWinTotal;
+    std::unordered_map<int, std::vector<int>> queryWinTotal;
+    
+    std::vector<std::pair<int, int>> precomputedBounds;
 
-    std::vector<int> lowerResolution(const std::vector<int>& rawQuery);
-    std::vector<std::pair<int,int>> get_unscaled_int_bounds(const std::vector<int>& rawQuery) const;
-    std::vector<int> sample_unscaled_point_from_scaled(const std::vector<int>& scaledCandidate);
-    std::vector<int> unscale_midpoint(const std::vector<int>& scaledQuery) const;
+    inline std::vector<int> lowerResolution(const std::vector<int>& rawQuery) const;
+    inline std::vector<std::pair<int,int>> get_unscaled_int_bounds(const std::vector<int>& rawQuery) const;
+    inline std::vector<int> sample_unscaled_point_from_scaled(const std::vector<int>& scaledCandidate) const;
+    inline std::vector<int> unscale_midpoint(const std::vector<int>& scaledQuery) const;
 };
