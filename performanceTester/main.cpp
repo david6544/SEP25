@@ -78,8 +78,8 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
     std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
     
     if (stochastic) {
-        queryPercents = {0.3};
-        // queryPercents = {1.5, 2};
+        // queryPercents = {0.3};
+        queryPercents = {0.3, 1.5, 2};
     }
 
     std::cout << std::fixed << std::setprecision(3);

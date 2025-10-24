@@ -7,10 +7,11 @@
 class IDW : public Mapping {
 private:
     KNNTree* knnTree;
-    int maxNeighbours, power, offset;
+    int maxNeighbours, power; 
+    double offset;
 
 public:
-    IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, int power, int offset = 0);
+    IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, int power, double offset = 0);
 
     ~IDW();
 
