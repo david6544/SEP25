@@ -103,7 +103,6 @@ include_directories(${EIGEN_INCLUDE_DIR})
 # Link Eigen to all targets that use it
 target_include_directories(sep25_main PUBLIC ${EIGEN_INCLUDE_DIR})
 target_include_directories(sep25_performance PUBLIC ${EIGEN_INCLUDE_DIR})
-target_include_directories(sep25_tests PUBLIC ${EIGEN_INCLUDE_DIR})
 
 # GoogleTest setup (unchanged)
 include(FetchContent)
@@ -119,6 +118,7 @@ enable_testing()
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
 target_compile_definitions(sep25_tests PUBLIC "TESTING")
+target_include_directories(sep25_tests PUBLIC ${EIGEN_INCLUDE_DIR})
 
 # Link GoogleTest
 target_link_libraries(sep25_tests 
