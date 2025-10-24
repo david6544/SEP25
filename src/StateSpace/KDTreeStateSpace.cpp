@@ -16,7 +16,7 @@ KDTreeStateSpace::KDTreeStateSpace(int dimensions, int dimensionSize)
         for (int d = 0; d < dimensions; ++d)
             totalPoints *= dimensionSize;
 
-        this->maxDepth = static_cast<int>(std::ceil(std::log2(totalPoints))) * 2; // 200% deeper
+        this->bucketSizeThreshold = static_cast<int>(std::log2(totalPoints)); // log2(N) heuristic
 
     }
 
@@ -39,7 +39,7 @@ void KDTreeStateSpace::destroy(TreeNode* node) {
     if (!node) return;
 
     for (auto* child : node->bucket) {
-        destroy(child);
+        delete child;
     }
 
     destroy(node->left);
@@ -72,54 +72,112 @@ KDTreeStateSpace::TreeNode* KDTreeStateSpace::insert_recursive(
 {
     int axis = depth % this->dimensions;
 
+    // Base case: create new node
     if (!node) {
         TreeNode* newNode = new TreeNode(coords, value, axis);
-        this->leaves[coordsToString(coords)] = newNode;
+        newNode->isBucket = true; 
+        newNode->bucket.push_back(new TreeNode(coords, value, axis)); // Adding itself to its bucket
+        leafNodes.insert(newNode);
         return newNode;
     }
 
-    // If max depth reached, bucket
-    if (maxDepth >= 0 && depth >= maxDepth) {
+    // If this node is a bucket
+    if (node->isBucket) {
+        // Update value if coordinate exists
         for (auto* child : node->bucket) {
             if (child->coords == coords) {
                 child->value = value;
                 return node;
             }
         }
-        if (!node->isBucket) {
-            node->isBucket = true;
-            this->leaves.erase(coordsToString(node->coords)); // remove parent
-        }
+
+        // Insert new point into bucket
         TreeNode* newNode = new TreeNode(coords, value, axis);
         node->bucket.push_back(newNode);
-        this->leaves[coordsToString(coords)] = newNode;
-        return node;
+        leafNodes.insert(newNode);
+
+        // Split only if threshold exceeded
+        if (node->bucket.size() > static_cast<size_t>(bucketSizeThreshold)) {
+
+            // 1) Choose split axis by largest range
+            int bestAxis = 0;
+            int maxRange = -1;
+            for (int d = 0; d < dimensions; ++d) {
+                int minVal = node->bucket[0]->coords[d];
+                int maxVal = node->bucket[0]->coords[d];
+                for (auto* child : node->bucket) {
+                    minVal = std::min(minVal, child->coords[d]);
+                    maxVal = std::max(maxVal, child->coords[d]);
+                }
+                int range = maxVal - minVal;
+                if (range > maxRange) {
+                    maxRange = range;
+                    bestAxis = d;
+                }
+            }
+
+            // Sort by best axis and pick median
+            std::sort(node->bucket.begin(), node->bucket.end(),
+                      [bestAxis](TreeNode* a, TreeNode* b) {
+                          return a->coords[bestAxis] < b->coords[bestAxis];
+                      });
+            size_t medianIndex = node->bucket.size() / 2;
+            TreeNode* medianNode = node->bucket[medianIndex];
+
+            // Promote median to current node
+            node->coords = medianNode->coords;
+            node->value  = medianNode->value;
+            node->axis   = bestAxis;
+            // Node is no longer a bucket
+            node->isBucket = false;
+            leafNodes.erase(node);
+
+            // Reinsert all other points
+            std::vector<TreeNode*> tmp = std::move(node->bucket);
+            node->bucket.clear();
+            node->left = node->right = nullptr;
+
+            for (size_t i = 0; i < tmp.size(); ++i) {
+                if (i == medianIndex) {
+                    delete tmp[i]; // median already promoted
+                    continue;
+                }
+                if (tmp[i]->coords[bestAxis] < node->coords[bestAxis]) {
+                    node->left = insert_recursive(node->left, tmp[i]->coords, tmp[i]->value, depth + 1);
+                } else {
+                    node->right = insert_recursive(node->right, tmp[i]->coords, tmp[i]->value, depth + 1);
+                }
+                delete tmp[i]; // temporary bucket node no longer needed
+            }
+
+            return node;
+        }
+
+        return node; // still a bucket, below threshold
     }
 
-    // Handle value update
+    // Standard KD-tree insertion
     if (coords == node->coords) {
         node->value = value;
         return node;
     }
 
-    bool insertedLeft = (coords[axis] < node->coords[axis]);
-    if (insertedLeft) {
-        if (node->left == nullptr && node->right == nullptr)
-            this->leaves.erase(coordsToString(node->coords)); // parent no longer leaf
+    bool goLeft = (coords[axis] < node->coords[axis]);
+    if (!node->left && !node->right && !node->isBucket) leafNodes.erase(node);
+
+    if (goLeft) {
         node->left = insert_recursive(node->left, coords, value, depth + 1);
     } else {
-        if (node->left == nullptr && node->right == nullptr)
-            this->leaves.erase(coordsToString(node->coords));
         node->right = insert_recursive(node->right, coords, value, depth + 1);
     }
 
-    // If both children are null, this node is a leaf — ensure it's in map
-    if (node->left == nullptr && node->right == nullptr && !node->isBucket) {
-        this->leaves[coordsToString(node->coords)] = node;
-    }
+    // Maintain leafNodes
+    if (!node->left && !node->right && !node->isBucket) leafNodes.insert(node);
+    else leafNodes.erase(node);
 
     return node;
 }
+
 
 
 // Public get entry point
@@ -153,7 +211,7 @@ double KDTreeStateSpace::get_recursive(TreeNode* node, const std::vector<int>& c
 
     if (coords == node->coords) return node->value;
 
-    int axis = depth % dimensions;
+    int axis = node->axis;
     if (coords[axis] < node->coords[axis]) {
         return get_recursive(node->left, coords, depth + 1);
     } else {
