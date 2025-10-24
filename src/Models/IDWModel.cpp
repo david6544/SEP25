@@ -2,6 +2,7 @@
 #include "IDWModel.hpp"
 #include <algorithm>
 #include <random>
+#include <functional>
 
 IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
     : Model(dimensions, dimensionSize, totalQueries) {
@@ -22,7 +23,7 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
     std::vector<std::vector<int>> gridPoints;
     std::vector<int> current(dimensions, 0);
 
-    auto generateGrid = [&](int dim) {
+    std::function<void(int)> generateGrid = [&](int dim) {
         if (dim == dimensions) {
             gridPoints.push_back(current);
             return;
