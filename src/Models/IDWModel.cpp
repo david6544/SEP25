@@ -38,6 +38,11 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
         evenQueries.push_back(q);
     }
 
+    for (const auto &qq : evenQueries) {
+        std::cout << "Query: ";
+        for (int v : qq) std::cout << v << " ";
+        std::cout << "\n";
+    }
     // If we still don't have enough (rare), fill remaining with random valid points
     std::mt19937 rng((unsigned)std::random_device{}());
     std::uniform_int_distribution<int> unif(0, dimensionSize - 1);
@@ -47,11 +52,7 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
         evenQueries.push_back(q);
     }
 
-    for (const auto &qq : evenQueries) {
-        std::cout << "Query: ";
-        for (int v : qq) std::cout << v << " ";
-        std::cout << "\n";
-    }
+    
     // Shuffle insertion order to avoid spatial bias when building KD-tree
     std::shuffle(evenQueries.begin(), evenQueries.end(), rng);
 
@@ -66,11 +67,10 @@ std::vector<int> IDWModel::get_next_query() {
 }
 
 
-
-
 void IDWModel::update_prediction(const std::vector<int> &query, double result) {
     stateSpace->insert(query, result);
 }
+
 double IDWModel::get_value_at(const std::vector<int> &query) {
     // Use IDW to compute the distance weighted by k nearest neighbors
     const int k = 5;
