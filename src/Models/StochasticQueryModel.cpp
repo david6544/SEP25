@@ -6,7 +6,7 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 5;
+    shouldQuery = 50;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     scaledSize = floor(dimensionSize * scaleRatio);
     shouldQuery = 4 * shouldQuery;
