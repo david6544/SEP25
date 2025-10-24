@@ -7,6 +7,9 @@
 #elif defined(GEK)
     #include "../src/Models/GEKModel.hpp"
     #define CurrentModel GEKModel
+#elif defined(GPMODEL)
+    #include "../src/Models/GP.hpp"
+    #define CurrentModel GPModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif

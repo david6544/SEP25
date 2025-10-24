@@ -11,7 +11,7 @@
 #elif defined(GEK)
     #include "Models/GEKModel.hpp"
     #define CurrentModel GEKModel
-#elif defined(GP)
+#elif defined(GPMODEL)
     #include "Models/GP.hpp"
     #define CurrentModel GPModel
 #else

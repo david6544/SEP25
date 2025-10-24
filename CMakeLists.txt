@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
-set(ALGORITHM "GP")
+set(ALGORITHM "GPMODEL")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
@@ -22,7 +22,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # --- GIT CHECKS (host side) ---
-if(CMAKE_CROSSCOMPILING)
+if(CMAKE_CROSSCOMPILING AND 0)
     # --- GIT CHECKS (only for cross-compilation) ---
     find_package(Git QUIET)
     if(NOT Git_FOUND)
