@@ -6,15 +6,16 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 50;
+    shouldQuery = 10;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
+    invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
     shouldQuery = 4 * shouldQuery;
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
+    queryWinTotal.resize(totalPoints);
     
     precomputedBounds.resize(scaledSize);
-    const double invScale = 1.0 / scaleRatio;
 
     for (int s = 0; s < scaledSize; ++s) {
         int lo = static_cast<int>(std::ceil(s * invScale));
@@ -24,7 +25,7 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
         precomputedBounds[s] = { lo, hi };
     }
     precomputedBounds[0].first = 0;
-    precomputedBounds[scaledSize-1].second = dimensionSize;
+    precomputedBounds[scaledSize-1].second = dimensionSize-1;
 }
 
 StochasticQueryModel::~StochasticQueryModel(){
@@ -34,7 +35,6 @@ StochasticQueryModel::~StochasticQueryModel(){
 
 std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& rawQuery) const {
     std::vector<int> scaled(rawQuery.size());
-    double invScale = 1.0 / scaleRatio;
 
     for (size_t i = 0; i < rawQuery.size(); ++i) {
         int x = rawQuery[i];
@@ -54,21 +54,11 @@ std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& r
 
 std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const std::vector<int>& scaledQuery) const{
     std::vector<int> result(scaledQuery.size());
-    double invScale = 1.0 / scaleRatio;
     static thread_local std::mt19937_64 rng(std::random_device{}());
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
         int s = scaledQuery[i];
-
-        int lo = std::clamp(precomputedBounds[s].first, 0, dimensionSize - 1);
-        int hi = std::clamp(precomputedBounds[s].second, 0, dimensionSize - 1);
-
-        if (lo < hi) {
-            std::uniform_int_distribution<int> dist(lo, hi);
-            result[i] = dist(rng);
-        } else {
-            result[i] = lo; // degenerate case (single value)
-        }
+        result[i] = precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1);
     }
     return result;
 }
@@ -76,15 +66,9 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
 
 std::vector<int> StochasticQueryModel::unscale_midpoint(const std::vector<int>& scaledQuery) const {
     std::vector<int> unscaled(scaledQuery.size());
-    double invScale = 1.0 / scaleRatio;
-
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
         int s = scaledQuery[i];
-        int lo = static_cast<int>(std::ceil(s * invScale));
-        int hi = static_cast<int>(std::ceil((s + 1) * invScale)) - 1;
-        lo = std::clamp(lo, 0, dimensionSize - 1);
-        hi = std::clamp(hi, 0, dimensionSize - 1);
-        unscaled[i] = (lo + hi) / 2;
+        unscaled[i] = (precomputedBounds[s].first + precomputedBounds[s].second) / 2;
     }
     return unscaled;
 }
@@ -106,57 +90,38 @@ std::vector<int> StochasticQueryModel::get_next_query() {
         currentQueryIDX = linear_index(currentQueryPoint, scaledSize);
         repeatQueries = shouldQuery;
         // reset per-point counters
-        wCount = 0;
-        tCount = 0;
-    } else {
-        // still repeating same point
-        repeatQueries--;
+        wCount = tCount = 0;
     }
+
+    repeatQueries--;
 
     return sample_unscaled_point_from_scaled(currentQueryPoint);
 }
 
 
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
-    // increment per-point counters
     if (result >= 0.9) wCount++;
     tCount++;
 
-    bool shouldSkip = (tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount);
-
-    // When we've collected enough samples for this point, flush them to the map
-    if (tCount >= shouldQuery || shouldSkip || currentQuery == totalQueries) {
-        auto &currentResults = queryWinTotal[currentQueryIDX]; // creates if missing
-        if (currentResults.size() < 2) currentResults.assign(2, 0);
-        // accumulate
-        currentResults[0] += wCount; // wins
-        currentResults[1] += tCount; // trials
-
-        double currentProb = double(currentResults[0]) / currentResults[1];
-        // update the tree with the aggregated probability
+    if (tCount >= shouldQuery || currentQuery == totalQueries || ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
+        queryWinTotal[currentQueryIDX] = {wCount, tCount};
+        double currentProb = double(wCount) / tCount;
         qt->update_prediction(currentQueryPoint, currentProb);
-
-        // reset per-point counters so next time we start fresh for new selection
-        wCount = 0;
-        tCount = 0;
-        repeatQueries = 0;
+        wCount = tCount = repeatQueries = 0;
     }
 
     // When we've processed all overall queries, build the interpolator
     if (currentQuery >= totalQueries) {
-        data.clear();
-        for (auto &p : queryWinTotal) {
-            if (p.second[1] == 0) continue;
-            double prob = double(p.second[0]) / p.second[1];
-            data.emplace_back(prob, unscale_midpoint(InputOutput::index_to_coords(p.first, dimensions, scaledSize)));
+        for (int i = 0; i < queryWinTotal.size(); i++) {
+            if (queryWinTotal[i].empty()) continue;
+            double prob = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
+            data.emplace_back(prob, unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize)));
         }
-        if (maper) delete maper;
-        double neigh = std::max(5.0, 0.005 * totalPoints);
+        int neigh = std::clamp(0.01 * data.size(), 5.0, 100.0);
         maper = new IDW(data, neigh, 1, 0.1);
     }
 }
 
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
-    if (maper) return maper->predict(query);
-    return 0.0;
+    return maper->predict(query);
 }
