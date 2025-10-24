@@ -60,5 +60,5 @@ void FunctionSpace::updateResults(double predicted, double actual){
 }
 
 void FunctionSpace::submitResults(){
-    allResults.push_back(results);
+    allResults.emplace_back(results);
 }

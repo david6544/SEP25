@@ -113,7 +113,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
                       << std::setw(10) << r.results.percentCorrect() << " | "
                       << std::setw(12) << r.results.meanAbsoluteError() << " | "
                       << std::setw(12) << r.results.rootMeanSquaredError() << " | "
-                      << std::setw(14) << r.results.realMean << " | "
+                      << std::setw(14) << r.results.meanActual() << " | "
                       << std::setw(14) << r.results.meanPredicted() << " | "
                       << std::setw(12) << std::fixed << std::setprecision(3) << duration << " |\n";
             // Collect stats

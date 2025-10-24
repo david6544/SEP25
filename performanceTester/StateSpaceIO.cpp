@@ -74,7 +74,7 @@ void StateSpaceIO::output_state(Model &model, bool outputStateSpace) {
     // Core write loop
     for (long long i = 0; i < maxIdx; ++i) {
         const auto coords = index_to_coords(i, dimensions, dimensionSize);
-        const double funcVal = writeFunctionFile ? this->stateSpace->get(coords) : 0.0;
+        const double funcVal = this->stateSpace->get(coords);
         const double queryVal = model.get_value_at(coords);
 
         stateSpace->updateResults(queryVal, funcVal);
