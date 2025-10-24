@@ -86,6 +86,25 @@ add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
 target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
 target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM})
 
+# --- EIGEN LIBRARY SETUP ---
+include(FetchContent)
+FetchContent_Declare(
+  eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG        3.4.0   # Change version if needed
+)
+FetchContent_MakeAvailable(eigen)
+
+# Manually add Eigen include directories
+# Eigen does not provide a target like Eigen3::Eigen when fetched this way
+set(EIGEN_INCLUDE_DIR ${eigen_SOURCE_DIR})
+include_directories(${EIGEN_INCLUDE_DIR})
+
+# Link Eigen to all targets that use it
+target_include_directories(sep25_main PUBLIC ${EIGEN_INCLUDE_DIR})
+target_include_directories(sep25_performance PUBLIC ${EIGEN_INCLUDE_DIR})
+target_include_directories(sep25_tests PUBLIC ${EIGEN_INCLUDE_DIR})
+
 # GoogleTest setup (unchanged)
 include(FetchContent)
 FetchContent_Declare(
@@ -137,5 +156,6 @@ if(DOXYGEN_FOUND)
 else()
     message(WARNING "Doxygen not found. 'docs' target will be unavailable.")
 endif()
+
 
 
