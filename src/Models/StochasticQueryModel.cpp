@@ -5,11 +5,9 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    int minQueries = 4;
-    scaleRatio = pow(((double) totalQueries)/(minQueries*pow(dimensionSize, dimensions)), 1.0/dimensions);
+    shouldQuery = 5;
+    scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     scaledSize = floor(dimensionSize * scaleRatio);
-
-    shouldQuery = minQueries * 2;
 
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
@@ -83,7 +81,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
 
         double currentProb = double(currentResults[0]) / currentResults[1];
         // update the tree with the aggregated probability
-        qt->update_prediction(unscaleCandidate(query), currentProb);
+        qt->update_prediction(query, currentProb);
 
         // reset per-point counters so next time we start fresh for new selection
         wCount = 0;
@@ -100,12 +98,11 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, p.first);
         }
         if (maper) delete maper;
-        int c = std::min(10, (int) (0.1 * data.size()));
-        maper = new IDW(data, c, 3, 1.5 * dimensionSize * scaleRatio);
+        maper = new IDW(data, 4, 2);
     }
 }
 
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
-    if (maper) return maper->predict(query);
+    if (maper) return maper->predict(lowerResolution(query));
     return 0.0;
 }

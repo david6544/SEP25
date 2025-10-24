@@ -30,9 +30,9 @@ typedef struct Results {
             this->correct++;
         }
 
-        double error = std::abs(actual-predicted);
-        sumAbsoluteError += error;
-        sumSquaredError += pow(error, 2);
+        double error = abs(actual-predicted);
+        sumAbsoluteError += 100 * error;
+        sumSquaredError += pow(100 * error, 2);
 
         minActual = std::min(minActual, actual);
         maxActual = std::max(maxActual, actual);
@@ -46,14 +46,13 @@ typedef struct Results {
         return totalSeen > 0 ? static_cast<double>(correct) / totalSeen * 100.0 : 0.0;
     }
 
-    double meanSquaredError() const {
-        return totalSeen > 0 ? sumSquaredError / totalSeen : 0.0;
+    double meanAbsoluteError() const {
+        return totalSeen > 0 ? sumAbsoluteError / totalSeen : 0.0;
     }
 
     double rootMeanSquaredError() const {
         return totalSeen > 0 ? std::sqrt(sumSquaredError / totalSeen) : 0.0;
     }
-
 
     double meanPredicted() const {
         return totalSeen > 0 ? predictedResultSum / totalSeen : 0.0;
