@@ -22,7 +22,7 @@ IDWModel::IDWModel(int dimensions, int dimensionSize, int totalQueries)
     std::vector<std::vector<int>> gridPoints;
     std::vector<int> current(dimensions, 0);
 
-    std::function<void(int)> generateGrid = [&](int dim) {
+    auto generateGrid = [&](int dim) {
         if (dim == dimensions) {
             gridPoints.push_back(current);
             return;
