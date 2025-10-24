@@ -65,8 +65,7 @@ private:
     Results results;
 
     std::vector<Results> allResults;
-    
-    void getResultsHelper(Model& model, std::vector<int>& query, int dimension);
+
     double computeMeanHelper(std::vector<int>& query, int index, double& sum, int& count) const;
 public:
     FunctionSpace(int dimensions, int dimensionSize, SpaceFunctionType spaceFunction);
@@ -77,7 +76,10 @@ public:
     
     double get(const std::vector<int>& coords) const override;
 
-    Results getResults(Model& model);
+    void resetResults();
+    void updateResults(double predicted, double actual);
+    void submitResults();
+
     std::vector<Results> getAllResults(){ return allResults; };
 
     double getRealMean() const;

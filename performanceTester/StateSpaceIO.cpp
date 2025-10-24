@@ -35,60 +35,73 @@ double StateSpaceIO::send_query_recieve_result(const std::vector<int> &query) {
     return result;
 }
 
-void StateSpaceIO::output_state(Model &model) {
-    int dimensions = model.get_dimensions();
-    int dimensionSize = model.get_dimensionSize();
+void StateSpaceIO::output_state(Model &model, bool outputStateSpace) {
+    stateSpace->resetResults();
+
+    const int dimensions = model.get_dimensions();
+    const int dimensionSize = model.get_dimensionSize();
 
     long long maxIdx = 1;
     for (int i = 0; i < dimensions; ++i)
         maxIdx *= dimensionSize;
 
-    // Base directory
-    std::string dir = "PerformanceData" + 
-                    std::to_string(dimensions)+
-                    ":"+
-                    std::to_string(dimensionSize)
-                    +"/" + this->name;
+    // Construct directory path
+    std::string dir = "PerformanceData" +
+                      std::to_string(dimensions) + ":" +
+                      std::to_string(dimensionSize) + "/" +
+                      this->name;
 
     std::filesystem::create_directories(dir);
 
-    // File paths
-    std::string functionFile = dir + "/" + this->name + ".txt";
-    std::string queriesFile  = dir + "/" + this->name + "-" + std::to_string(this->queries) + ".txt";
+    // Define file paths
+    const std::string functionFile = dir + "/" + this->name + ".txt";
+    const std::string queriesFile  = dir + "/" + this->name + "-" + std::to_string(this->queries) + ".txt";
 
-    if (!std::filesystem::exists(functionFile)) {
-        std::ofstream out(functionFile);
-        if (!out.is_open()) {
+    // Prepare output streams
+    std::ofstream funcOut;
+    const bool writeFunctionFile = !std::filesystem::exists(functionFile);
+    if (writeFunctionFile) {
+        funcOut.open(functionFile);
+        if (!funcOut.is_open())
             throw std::runtime_error("Failed to open " + functionFile);
-        }
-
-        for (long long i = 0; i < maxIdx; i++) {
-            auto coords = index_to_coords(i, dimensions, dimensionSize);
-            double funcVal = this->stateSpace->get(coords);
-            
-            if (i > 0) out << " ";
-            out << funcVal;
-        }
-        out << std::endl;
-        out.close();
-    } 
-
-    if (std::filesystem::exists(queriesFile)) {
-        std::filesystem::remove(queriesFile); // delete old file
     }
 
-    std::ofstream out(queriesFile);
-    if (!out.is_open()) {
+    // Always recreate queries file
+    std::ofstream queryOut(queriesFile, std::ios::trunc);
+    if (!queryOut.is_open())
         throw std::runtime_error("Failed to open " + queriesFile);
+
+    // Core write loop
+    for (long long i = 0; i < maxIdx; ++i) {
+        const auto coords = index_to_coords(i, dimensions, dimensionSize);
+        const double funcVal = writeFunctionFile ? this->stateSpace->get(coords) : 0.0;
+        const double queryVal = model.get_value_at(coords);
+
+        stateSpace->updateResults(queryVal, funcVal);
+
+        if (outputStateSpace){
+            if (i > 0) {
+                if (writeFunctionFile) funcOut << " ";
+                queryOut << " ";
+            }
+
+            if (writeFunctionFile) funcOut << funcVal;
+            queryOut << queryVal;
+        }
     }
 
-    for (long long i = 0; i < maxIdx; i++) {
-        auto coords = index_to_coords(i, dimensions, dimensionSize);
-        double stateVal = model.get_value_at(coords);
+    if (writeFunctionFile) funcOut << std::endl;
+    queryOut << std::endl;
 
-        if (i > 0) out << " ";
-        out << stateVal;
-    }
-    out << std::endl;
-    out.close();
+    // Streams auto-close via RAII, but close explicitly for clarity
+    if (writeFunctionFile) funcOut.close();
+    queryOut.close();
+
+    stateSpace->submitResults();
 }
+
+void StateSpaceIO::output_state(Model &model){
+    output_state(model, false);
+}
+
+

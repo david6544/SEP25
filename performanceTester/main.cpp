@@ -37,7 +37,7 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
     FunctionSpace fspace(dimensions, dimensionSize, func);
     
     StateSpaceIO::set_IO(fspace, name, queries, stochastic);
-    InputOutput* io = InputOutput::get_instance();
+    StateSpaceIO* io = (StateSpaceIO*) InputOutput::get_instance();
 
     CurrentModel model(dimensions, dimensionSize, queries);
     
@@ -48,11 +48,10 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
 
         model.update_prediction(query, result);
     }
-    if (outputStateSpace){
-        io->output_state(model);
-    }
-    Results res = fspace.getResults(model);
-    return {name, res};
+    
+    io->output_state(model, outputStateSpace);
+
+    return {name, fspace.getAllResults().back()};
 }
 
 // Run model against all functions in testfunctions and output a table
