@@ -43,10 +43,12 @@ void StateSpaceIO::output_state(Model &model) {
     for (int i = 0; i < dimensions; ++i)
         maxIdx *= dimensionSize;
 
+
     // Base directory
     std::string dir = "PerformanceData" + 
                     std::to_string(dimensions)+
-                    ":"+
+                    // ":"+
+                    "-"+
                     std::to_string(dimensionSize)
                     +"/" + this->name;
 
@@ -81,6 +83,7 @@ void StateSpaceIO::output_state(Model &model) {
     if (!out.is_open()) {
         throw std::runtime_error("Failed to open " + queriesFile);
     }
+
 
     for (long long i = 0; i < maxIdx; i++) {
         auto coords = index_to_coords(i, dimensions, dimensionSize);

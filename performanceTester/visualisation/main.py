@@ -339,7 +339,7 @@ def main():
     try:
         # Find the substring between the last non-digit and the colon
         # e.g. "../../PerformanceData2:50" -> extract "2"
-        before_colon = base_path.split(":")[0]
+        before_colon = base_path.split("-")[0]
         dims_str = "".join(ch for ch in before_colon if ch.isdigit())
         if not dims_str:
             raise ValueError("No dimension number found before ':' in base path.")

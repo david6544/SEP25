@@ -164,7 +164,7 @@ double GPModel::get_value_at(const std::vector<int>& point_queryspace) {
     double expectation = 0.0;
     Eigen::RowVectorXd X_predict_new(given_ndims);
     for (size_t i = 0; i < given_ndims; i++) {
-        X_predict_new(i) = point_queryspace[i];
+        X_predict_new(i) = static_cast<double>(point_queryspace[i]);
     }
     expectation = skx::algo::gp::gp_calc_expectation(gp, X_predict_new);
     return expectation;
