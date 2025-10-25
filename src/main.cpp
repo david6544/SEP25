@@ -15,6 +15,9 @@
 #elif defined(RBF)
     #include "Models/RBF.hpp"
     #define CurrentModel RBFModel
+#elif defined(GEK)
+    #include "Models/GEKModel.hpp"
+    #define CurrentModel GEKModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
