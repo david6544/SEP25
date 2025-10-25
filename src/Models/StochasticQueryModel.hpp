@@ -1,7 +1,7 @@
 #pragma once
 #include "Model.hpp"
 #include "Querying/QueryTree.hpp"
-#include "Mapping/IDW.hpp"
+#include "Mapping/LinearStochastic.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -16,7 +16,7 @@ public:
     double get_value_at(const std::vector<int>& query) override;
 private:
     QueryTree* qt;
-    IDW* maper = nullptr;
+    LinearStochastic* maper = nullptr;
     std::vector<std::pair<double, std::vector<int>>> data;
     int currentQuery = 0;
     int totalPoints = 0;
