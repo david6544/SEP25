@@ -2,16 +2,21 @@
 #include "KalmanFilter.hpp"
 #include <iostream>
 #include <random>
+#include <cmath>
 
 KalmanFilter::KalmanFilter(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries),
       state(Eigen::VectorXd::Zero(dimensions)),
-      covariance(Eigen::MatrixXd::Identity(dimensions, dimensions)),
-      processNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 0.1),
+      covariance(Eigen::MatrixXd::Identity(dimensions, dimensions) * 10.0), // Larger initial uncertainty
+      processNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 0.01), // Reduced process noise
       measurementNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 0.1),
       transitionMatrix(Eigen::MatrixXd::Identity(dimensions, dimensions)),
       measurementMatrix(Eigen::MatrixXd::Identity(dimensions, dimensions)) {
-    // Initialization of the Kalman filter
+    
+    // Initialize state with random values within dimension size
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0, dimensionSize);
 }
 
 std::vector<int> KalmanFilter::get_next_query() {
@@ -27,11 +32,15 @@ std::vector<int> KalmanFilter::get_next_query() {
 }
 
 void KalmanFilter::update_prediction(const std::vector<int> &query, double result) {
-    // Convert query to Eigen vector
-    Eigen::VectorXd measurement(query.size());
+    // Create measurement vector that combines query location and result
+    Eigen::VectorXd measurement(state.size());
     for (size_t i = 0; i < query.size(); ++i) {
         measurement[i] = query[i];
     }
+    
+    // Update measurement noise based on the result magnitude
+    double noise_scale = std::max(1.0, std::abs(result)) * 0.01;
+    measurementNoise = Eigen::MatrixXd::Identity(state.size(), state.size()) * noise_scale;
 
     // Update the state with the measurement
     update(measurement);
