@@ -42,7 +42,12 @@ double KalmanFilter::get_value_at(const std::vector<int> &query) {
     if (query.size() != state.size()) {
         throw std::invalid_argument("Query size does not match state dimensions.");
     }
-    return state.dot(Eigen::VectorXd::Map(query.data(), query.size()));
+    // Create a temporary VectorXd and copy values
+    Eigen::VectorXd query_vec(query.size());
+    for (size_t i = 0; i < query.size(); ++i) {
+        query_vec[i] = static_cast<double>(query[i]);
+    }
+    return state.dot(query_vec);
 }
 
 void KalmanFilter::predict() {

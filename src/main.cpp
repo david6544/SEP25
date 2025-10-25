@@ -1,5 +1,7 @@
 #include <vector>
 
+#include <iostream>
+
 #include "InputOutput/CommandLineInputOutput.hpp"
 
 #if defined(LINEAR)
