@@ -45,7 +45,7 @@ Matrix buildM1(double x1, double x2) {
 double LinearStochastic::predict(std::vector<int> query) {
     int dims = query.size();
 
-    // Step 1: Get nearest neighbours
+    // Step 1: Get nearest neighbours (we use them only to derive local bounds)
     auto neighbors = this->knnTree->getKNearest(query, this->maxNeighbours);
     if (neighbors.empty()) return this->offset;
 
@@ -60,52 +60,49 @@ double LinearStochastic::predict(std::vector<int> query) {
             maxVal = std::max(maxVal, val);
         }
         if (std::fabs(maxVal - minVal) < 1e-9) {
-            // Degenerate case: no variation
-            bounds[d] = {minVal, minVal + 1.0};
-        } else {
-            bounds[d] = {minVal, maxVal};
+            // Degenerate case: bump slightly to avoid zero division
+            maxVal = minVal + 1e-6;
         }
+        bounds[d] = { minVal, maxVal };
     }
 
-    // Step 3: Build M_n = ⊗ buildM1(x1, x2)
-    Matrix M = buildM1(bounds[0].first, bounds[0].second);
-    for (int d = 1; d < dims; ++d) {
-        M = kroneckerProduct(M, buildM1(bounds[d].first, bounds[d].second));
-    }
+    // Step 3: Multilinear interpolation via corner weights
+    int corners = 1 << dims; // 2^n corners
+    double prediction = 0.0;
 
-    // Step 4: Build y vector (2^n corner values)
-    int corners = std::pow(2, dims);
-    Eigen::VectorXd y(corners);
+    // Convert query coords to double
+    std::vector<double> qd(dims);
+    for (int d = 0; d < dims; ++d) qd[d] = static_cast<double>(query[d]);
+
     for (int i = 0; i < corners; ++i) {
-        std::vector<int> corner = query;
+        // build corner coordinate and compute weight
+        double weight = 1.0;
+        std::vector<int> cornerInt(dims);
         for (int d = 0; d < dims; ++d) {
             bool high = (i >> d) & 1;
-            corner[d] = high ? (int)bounds[d].second : (int)bounds[d].first;
+            double x1 = bounds[d].first;
+            double x2 = bounds[d].second;
+            double denom = (x2 - x1);
+            // safety:
+            if (std::fabs(denom) < 1e-12) denom = 1e-12;
+
+            if (!high) {
+                // corner uses x1
+                cornerInt[d] = static_cast<int>(std::lround(x1));
+                weight *= (x2 - qd[d]) / denom;
+            } else {
+                // corner uses x2
+                cornerInt[d] = static_cast<int>(std::lround(x2));
+                weight *= (qd[d] - x1) / denom;
+            }
         }
-        // Find closest neighbor for this corner
-        auto cornerNeighbors = this->knnTree->getKNearest(corner, 1);
-        y(i) = cornerNeighbors.front().value;
+
+        // get value at corner (nearest recorded data point)
+        auto cornerNeighbors = this->knnTree->getKNearest(cornerInt, 1);
+        double ycorner = cornerNeighbors.front().value;
+
+        prediction += weight * ycorner;
     }
-
-    // Step 5: Solve M * a = y
-    Eigen::MatrixXd M_eig(M.size(), M[0].size());
-    for (size_t i = 0; i < M.size(); ++i)
-        for (size_t j = 0; j < M[i].size(); ++j)
-            M_eig(i, j) = M[i][j];
-
-    Eigen::VectorXd a = M_eig.colPivHouseholderQr().solve(y);
-
-    // Step 6: Build query basis b(q)
-    Matrix b = {{1, static_cast<double>(query[0])}};
-    for (int d = 1; d < dims; ++d)
-        b = kroneckerProduct(b, {{1, static_cast<double>(query[d])}});
-
-    // Step 7: Compute prediction = b(q)^T * a
-    Eigen::RowVectorXd bVec(b[0].size());
-    for (size_t i = 0; i < b[0].size(); ++i)
-        bVec(i) = b[0][i];
-
-    double prediction = (bVec * a)(0);
 
     return prediction + this->offset;
 }

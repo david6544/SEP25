@@ -117,12 +117,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             double prob = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
             std::vector<int> cQ = unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize));
             data.emplace_back(prob, cQ);
-            cQ[1] -= dimensionSize;
-            data.emplace_back(prob, cQ);
-            cQ[1] += 2 * dimensionSize;
-            data.emplace_back(prob, cQ);
         }
-        maper = new LinearStochastic(data, 1 << query.size(), 1, 0.1);
+        maper = new LinearStochastic(data, 1 << (int)query.size(), 1, 0.1);
     }
 }
 
