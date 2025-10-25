@@ -10,6 +10,9 @@
 #elif defined(RBF)
     #include "../src/Models/RBF.hpp"
     #define CurrentModel RBFModel
+#elif defined(KALMAN)
+    #include "../src/Models/KalmanFilter.hpp"
+    #define CurrentModel KalmanFilter
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
