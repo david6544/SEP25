@@ -105,6 +105,7 @@ double LinearStochastic::predict(std::vector<int> query) {
         prediction += weight * ycorner;
         totalWeight += weight;
     }
+    if (totalWeight > 1e-12) prediction /= totalWeight;
 
     return prediction;
 }
