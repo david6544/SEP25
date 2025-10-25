@@ -7,9 +7,9 @@
 KalmanFilter::KalmanFilter(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries),
       state(Eigen::VectorXd::Zero(dimensions)),
-      covariance(Eigen::MatrixXd::Identity(dimensions, dimensions) * 10.0), // Larger initial uncertainty
-      processNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 0.01), // Reduced process noise
-      measurementNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 0.1),
+      covariance(Eigen::MatrixXd::Identity(dimensions, dimensions) * 100.0),
+      processNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 0.1),
+      measurementNoise(Eigen::MatrixXd::Identity(dimensions, dimensions) * 1.0),
       transitionMatrix(Eigen::MatrixXd::Identity(dimensions, dimensions)),
       measurementMatrix(Eigen::MatrixXd::Identity(dimensions, dimensions)) {
     
@@ -17,51 +17,72 @@ KalmanFilter::KalmanFilter(int dimensions, int dimensionSize, int totalQueries)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0, dimensionSize);
+    
+    // Initialize state with random values
+    for (int i = 0; i < dimensions; ++i) {
+        state[i] = dis(gen);
+    }
 }
 
 std::vector<int> KalmanFilter::get_next_query() {
     // Predict the next state
     predict();
 
-    // Convert the predicted state to a query vector
-    std::vector<int> query(state.size());
-    for (int i = 0; i < state.size(); ++i) {
-        query[i] = static_cast<int>(state[i]);
+    // Convert the predicted state to a query vector (excluding the value component)
+    std::vector<int> query(state.size() - 1);  // -1 because last state component is the value
+    for (int i = 0; i < state.size() - 1; ++i) {
+        // Ensure query stays within bounds
+        int pos = std::max(0, std::min(get_dimensionSize() - 1, static_cast<int>(state[i])));
+        query[i] = pos;
     }
     return query;
 }
 
 void KalmanFilter::update_prediction(const std::vector<int> &query, double result) {
-    // Create measurement vector that combines query location and result
+    // Create augmented measurement vector that includes both position and result
     Eigen::VectorXd measurement(state.size());
     for (size_t i = 0; i < query.size(); ++i) {
         measurement[i] = query[i];
     }
+    measurement[query.size()] = result;  // Add the function value to the measurement
     
-    // Update measurement noise based on the result magnitude
-    double noise_scale = std::max(1.0, std::abs(result)) * 0.01;
-    measurementNoise = Eigen::MatrixXd::Identity(state.size(), state.size()) * noise_scale;
+    // Adaptive measurement noise based on the observation
+    double pos_noise = 0.1;  // Position measurement noise
+    double val_noise = std::max(0.1, std::abs(result) * 0.05);  // Value measurement noise
+    
+    measurementNoise = Eigen::MatrixXd::Identity(state.size(), state.size());
+    for (size_t i = 0; i < query.size(); ++i) {
+        measurementNoise(i, i) = pos_noise;
+    }
+    measurementNoise(query.size(), query.size()) = val_noise;
 
     // Update the state with the measurement
     update(measurement);
 }
 
 double KalmanFilter::get_value_at(const std::vector<int> &query) {
-    // Retrieve the value at the given query (state estimate)
-    if (query.size() != state.size()) {
+    if (query.size() != state.size() - 1) {
         throw std::invalid_argument("Query size does not match state dimensions.");
     }
-    // Create a temporary VectorXd and copy values
-    Eigen::VectorXd query_vec(query.size());
+
+    // Create measurement vector for the query position
+    Eigen::VectorXd current_pos(state.size());
     for (size_t i = 0; i < query.size(); ++i) {
-        query_vec[i] = static_cast<double>(query[i]);
+        current_pos[i] = query[i];
     }
-    return state.dot(query_vec);
+    current_pos[query.size()] = 0;  // Initialize value component
+
+    // Use current state estimate to predict value
+    // The last component of the state vector represents our estimate of the function value
+    return state[query.size()];
 }
 
 void KalmanFilter::predict() {
-    // Predict the next state
-    state = transitionMatrix * state;
+    // Add small random walk to the state for exploration
+    Eigen::VectorXd noise = Eigen::VectorXd::Random(state.size());
+    state = transitionMatrix * state + noise * 0.1 * get_dimensionSize();
+    
+    // Update covariance
     covariance = transitionMatrix * covariance * transitionMatrix.transpose() + processNoise;
 }
 
