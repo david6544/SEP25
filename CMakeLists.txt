@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
+# set(ALGORITHM "DUMB")
 set(ALGORITHM "KALMAN")
 
 # Detect if building natively or with a toolchain
@@ -86,24 +87,6 @@ add_executable(sep25_performance ${PERFORMANCE_FILES} ${SRC_FILES})
 target_include_directories(sep25_performance PUBLIC ${CMAKE_BINARY_DIR})
 target_compile_definitions(sep25_performance PUBLIC ${ALGORITHM})
 
-# --- EIGEN LIBRARY SETUP ---
-include(FetchContent)
-FetchContent_Declare(
-  eigen
-  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG        3.4.0   # Change version if needed
-)
-FetchContent_MakeAvailable(eigen)
-
-# Manually add Eigen include directories
-# Eigen does not provide a target like Eigen3::Eigen when fetched this way
-set(EIGEN_INCLUDE_DIR ${eigen_SOURCE_DIR})
-include_directories(${EIGEN_INCLUDE_DIR})
-
-# Link Eigen to all targets that use it
-target_include_directories(sep25_main PUBLIC ${EIGEN_INCLUDE_DIR})
-target_include_directories(sep25_performance PUBLIC ${EIGEN_INCLUDE_DIR})
-
 # GoogleTest setup (unchanged)
 include(FetchContent)
 FetchContent_Declare(
@@ -118,17 +101,23 @@ enable_testing()
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
 target_compile_definitions(sep25_tests PUBLIC "TESTING")
-target_include_directories(sep25_tests PUBLIC ${EIGEN_INCLUDE_DIR})
+
+find_package(Eigen3 REQUIRED)
+target_link_libraries(sep25_main PUBLIC Eigen3::Eigen)
+target_link_libraries(sep25_performance PUBLIC Eigen3::Eigen)
 
 # Link GoogleTest
 target_link_libraries(sep25_tests 
     gtest_main
     gmock_main
+    Eigen3::Eigen
 )
 
 # Add tests
 target_link_libraries(sep25_tests gtest_main gmock_main)
 add_test(NAME UnitTests COMMAND sep25_tests)
+
+
 
 # MinGW static linking for cross-build
 if(MINGW)
@@ -156,6 +145,5 @@ if(DOXYGEN_FOUND)
 else()
     message(WARNING "Doxygen not found. 'docs' target will be unavailable.")
 endif()
-
 
 
