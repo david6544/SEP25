@@ -107,8 +107,6 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         queryWinTotal[currentQueryIDX] = {wCount, tCount};
         double currentProb = double(wCount) / tCount;
         qt->update_prediction(currentQueryPoint, currentProb);
-        currentQueryPoint[1] = (currentQueryPoint[1] + scaledSize/2)%scaledSize;
-        qt->update_prediction(currentQueryPoint, currentProb);
         wCount = tCount = repeatQueries = 0;
     }
 
@@ -117,9 +115,12 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         for (int i = 0; i < queryWinTotal.size(); i++) {
             if (queryWinTotal[i].empty()) continue;
             double prob = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
-            std::vector<int> cQ = InputOutput::index_to_coords(i, dimensions, scaledSize);
-            data.emplace_back(prob, unscale_midpoint(cQ));
-            cQ[1] = (cQ[1] + scaledSize/2)%scaledSize;
+            std::vector<int> cQ = unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize));
+            data.emplace_back(prob, cQ);
+            cQ[1] -= dimensionSize;
+            data.emplace_back(prob, cQ);
+            cQ[1] += 2 * dimensionSize;
+            data.emplace_back(prob, cQ);
         }
         int neigh = std::clamp(0.01 * data.size(), 2.0, 5.0);
         maper = new IDW(data, neigh, 1, 0.1);
