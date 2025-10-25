@@ -69,6 +69,7 @@ double LinearStochastic::predict(std::vector<int> query) {
     // Step 3: Multilinear interpolation via corner weights
     int corners = 1 << dims; // 2^n corners
     double prediction = 0.0;
+    double totalWeight = 0.0;
 
     // Convert query coords to double
     std::vector<double> qd(dims);
@@ -102,7 +103,8 @@ double LinearStochastic::predict(std::vector<int> query) {
         double ycorner = cornerNeighbors.front().value;
 
         prediction += weight * ycorner;
+        totalWeight += weight;
     }
 
-    return prediction + this->offset;
+    return prediction;
 }
