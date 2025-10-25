@@ -102,15 +102,22 @@ file(GLOB TEST_FILES test/*.cpp)
 add_executable(sep25_tests ${SRC_FILES} ${TEST_FILES})
 target_compile_definitions(sep25_tests PUBLIC "TESTING")
 
+find_package(Eigen3 REQUIRED)
+target_link_libraries(sep25_main PUBLIC Eigen3::Eigen)
+target_link_libraries(sep25_performance PUBLIC Eigen3::Eigen)
+
 # Link GoogleTest
 target_link_libraries(sep25_tests 
     gtest_main
     gmock_main
+    Eigen3::Eigen
 )
 
 # Add tests
 target_link_libraries(sep25_tests gtest_main gmock_main)
 add_test(NAME UnitTests COMMAND sep25_tests)
+
+
 
 # MinGW static linking for cross-build
 if(MINGW)

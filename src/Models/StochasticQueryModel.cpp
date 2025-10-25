@@ -122,8 +122,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             cQ[1] += 2 * dimensionSize;
             data.emplace_back(prob, cQ);
         }
-        int neigh = std::clamp(0.01 * data.size(), 2.0, 10.0);
-        maper = new LinearStochastic(data, neigh, 1, 0.1);
+        maper = new LinearStochastic(data, 1 << query.size(), 1, 0.1);
     }
 }
 
