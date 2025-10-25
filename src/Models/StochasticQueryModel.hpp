@@ -22,13 +22,13 @@ private:
     int totalPoints = 0;
     int repeatQueries = 0, shouldQuery = 0;
     int wCount = 0, tCount = 0;
-    double scaleRatio = 1;
+    double scaleRatio = 1, invScale = 1;
     int scaledSize = 1;
 
     int currentQueryIDX;
     std::vector<int> currentQueryPoint;
 
-    std::unordered_map<int, std::vector<int>> queryWinTotal;
+    std::vector<std::vector<int>> queryWinTotal;
     
     std::vector<std::pair<int, int>> precomputedBounds;
 
