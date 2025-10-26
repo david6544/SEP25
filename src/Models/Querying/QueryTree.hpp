@@ -35,4 +35,9 @@ private:
 
     std::vector<int> get_candidate(TreeNode* leaf);
     bool point_in_leaf(const std::vector<int>& query, const TreeNode* leaf);
+
+    // Helper methods
+    double compute_l2_distance(const std::vector<int>& a, const std::vector<int>& b);
+    double compute_leaf_volume(const TreeNode* leaf);
+    double estimate_local_uncertainty(const TreeNode* leaf);
 };

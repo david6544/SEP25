@@ -2,9 +2,10 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <cmath>
 
 QueryTree::QueryTree(int dims, int dimSize, int leafSize)
-    : dims(dims), dimSize(dimSize), leafSize(leafSize) 
+    : dims(dims), dimSize(dimSize), leafSize(leafSize), totalQueries(0)
 {
     root = new TreeNode;
     root->dimensionLimits = std::vector<std::vector<int>>(dims, {0, dimSize-1});
@@ -24,7 +25,6 @@ void freeTree(TreeNode* node){
     delete node;
 }
 
-
 QueryTree::~QueryTree(){
     freeTree(root);
 }
@@ -36,29 +36,93 @@ bool QueryTree::point_in_leaf(const std::vector<int>& query, const TreeNode* lea
     return true;
 }
 
+// Compute L2 (Euclidean) distance between two points
+double QueryTree::compute_l2_distance(const std::vector<int>& a, const std::vector<int>& b) {
+    double sum = 0.0;
+    for (int d = 0; d < dims; ++d) {
+        double diff = a[d] - b[d];
+        sum += diff * diff;
+    }
+    return std::sqrt(sum);
+}
+
+// Compute leaf volume for normalization
+double QueryTree::compute_leaf_volume(const TreeNode* leaf) {
+    double volume = 1.0;
+    for (int d = 0; d < dims; ++d) {
+        volume *= (leaf->dimensionLimits[d][1] - leaf->dimensionLimits[d][0] + 1);
+    }
+    return volume;
+}
+
+// Estimate local uncertainty as variance of results in the leaf
+double QueryTree::estimate_local_uncertainty(const TreeNode* leaf) {
+    if (leaf->points.size() < 2) {
+        // High uncertainty when few points: encourages exploration
+        return 1.0;
+    }
+    
+    double mean = 0.0;
+    for (const auto& p : leaf->points) {
+        mean += p.first;  // p.first is the result value
+    }
+    mean /= leaf->points.size();
+    
+    double variance = 0.0;
+    for (const auto& p : leaf->points) {
+        double diff = p.first - mean;
+        variance += diff * diff;
+    }
+    variance /= leaf->points.size();
+    
+    return variance;
+}
+
 std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
     if (leaf->points.empty()) {
+        // No points yet: return center of leaf
         std::vector<int> mid(dims);
         for (int d = 0; d < dims; ++d)
             mid[d] = (leaf->dimensionLimits[d][0] + leaf->dimensionLimits[d][1]) / 2;
         return mid;
     }
 
-    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(10);
+    // Adaptive candidate count: more candidates for denser leaves
+    int candidateCount = std::clamp(5 + (int)std::sqrt(leaf->points.size()), 5, 50);
+    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(candidateCount);
 
     std::vector<int> bestPoint;
     double bestScore = -1.0;
+    
+    // Compute alpha: decay from 0.7 (exploration) to 0.3 (exploitation)
+    // as totalQueries increases
+    double alpha = 0.7 - 0.4 * std::min(1.0, totalQueries / 200.0);
+    
+    // Estimate local uncertainty for this leaf
+    double localUncertainty = estimate_local_uncertainty(leaf);
+    
+    // Compute normalization factor for distances
+    double maxPossibleDist = 0.0;
+    for (int d = 0; d < dims; ++d) {
+        int range = leaf->dimensionLimits[d][1] - leaf->dimensionLimits[d][0];
+        maxPossibleDist += range * range;
+    }
+    maxPossibleDist = std::sqrt(maxPossibleDist);
+    if (maxPossibleDist < 1e-9) maxPossibleDist = 1.0;
 
     for (auto& candidate : candidates) {
+        // Find minimum L2 distance to existing points (exploitation term)
         double minDist = std::numeric_limits<double>::infinity();
         for (auto& p : leaf->points) {
-            double dist = 0.0;
-            for (int d = 0; d < dims; ++d)
-                dist += std::abs(candidate[d] - p.second[d]);
+            double dist = compute_l2_distance(candidate, p.second);
             if (dist < minDist) minDist = dist;
         }
-
-        double score = minDist / (1.0 + 0.1 * leaf->points.size());
+        
+        // Normalize distance to [0, 1]
+        double normalizedDist = minDist / maxPossibleDist;
+        
+        // Hybrid score: balance exploration (uncertainty) and exploitation (distance)
+        double score = alpha * localUncertainty + (1.0 - alpha) * normalizedDist;
 
         if (score > bestScore) {
             bestScore = score;
@@ -67,6 +131,7 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
     }
 
     if (bestPoint.empty()) {
+        // Fallback to center
         bestPoint.resize(dims);
         for (int d = 0; d < dims; ++d)
             bestPoint[d] = (leaf->dimensionLimits[d][0] + leaf->dimensionLimits[d][1]) / 2;
@@ -74,8 +139,6 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
 
     return bestPoint;
 }
-
-
 
 std::vector<int> QueryTree::get_next_query() {
     std::pair<double, std::vector<int>> bestChoice = {-1.0, {}};
@@ -85,14 +148,38 @@ std::vector<int> QueryTree::get_next_query() {
 
         double score;
         if (!leaf->points.empty()) {
+            // Compute hybrid exploration-exploitation score
+            double alpha = 0.7 - 0.4 * std::min(1.0, totalQueries / 200.0);
+            double localUncertainty = estimate_local_uncertainty(leaf);
+            
+            // Find minimum L2 distance to existing points
             double minDist = std::numeric_limits<double>::infinity();
             for (auto& p : leaf->points) {
-                double dist = 0.0;
-                for (int d = 0; d < dims; ++d) dist += std::abs(candidate[d] - p.second[d]);
+                double dist = compute_l2_distance(candidate, p.second);
                 if (dist < minDist) minDist = dist;
             }
-            score = minDist / (1.0 + 0.1 * leaf->points.size());
+            
+            // Normalize distance by leaf dimensions
+            double maxPossibleDist = 0.0;
+            for (int d = 0; d < dims; ++d) {
+                int range = leaf->dimensionLimits[d][1] - leaf->dimensionLimits[d][0];
+                maxPossibleDist += range * range;
+            }
+            maxPossibleDist = std::sqrt(maxPossibleDist);
+            if (maxPossibleDist < 1e-9) maxPossibleDist = 1.0;
+            
+            double normalizedDist = minDist / maxPossibleDist;
+            
+            // Hybrid score
+            score = alpha * localUncertainty + (1.0 - alpha) * normalizedDist;
+            
+            // Normalize by leaf volume to avoid bias toward large leaves
+            double leafVolume = compute_leaf_volume(leaf);
+            double volumeNormalization = std::pow(leafVolume, 1.0 / dims);
+            score /= volumeNormalization;
+            
         } else {
+            // Empty leaf: prioritize with high score to encourage exploration
             score = 1e9;
         }
 
@@ -102,7 +189,9 @@ std::vector<int> QueryTree::get_next_query() {
         }
     }
 
-    if (bestChoice.second.empty()) bestChoice.second = std::vector<int>(dims, dimSize / 2);
+    if (bestChoice.second.empty()) {
+        bestChoice.second = std::vector<int>(dims, dimSize / 2);
+    }
 
     return bestChoice.second;
 }
@@ -122,9 +211,8 @@ TreeNode* QueryTree::find_leaf(TreeNode* node, const std::vector<int>& query) {
     else if (node->right)
         return find_leaf(node->right, query);
     else
-        return node; // fallback in case structure is incomplete
+        return node;
 }
-
 
 void QueryTree::update_prediction(const std::vector<int>& query, double result) {
     TreeNode* target = nullptr;
@@ -142,12 +230,15 @@ void QueryTree::update_prediction(const std::vector<int>& query, double result) 
     }
 
     target->points.push_back({result, query});
+    totalQueries++;  // Track total queries for alpha decay
 
     if ((int)target->points.size() <= leafSize) return;
 
+    // Split criterion: use variance in RESULT VALUES rather than coordinates
+    // This aligns tree structure with function behavior
     int n = target->points.size();
     int bestDim = -1;
-    double bestVar = -1.0;
+    double bestSplitQuality = -1.0;
 
     for (int d = 0; d < dims; ++d) {
         std::vector<int> vals;
@@ -159,13 +250,35 @@ void QueryTree::update_prediction(const std::vector<int>& query, double result) 
 
         if (maxVal <= minVal) continue;  // Cannot split this dimension
 
-        double mean = std::accumulate(vals.begin(), vals.end(), 0.0) / n;
-        double var = 0.0;
-        for (auto v : vals) var += (v - mean) * (v - mean);
-        var /= n;
+        // Sort points by this dimension to evaluate split quality
+        auto sortedPoints = target->points;
+        std::sort(sortedPoints.begin(), sortedPoints.end(),
+                  [d](auto &a, auto &b){ return a.second[d] < b.second[d]; });
 
-        if (var > bestVar) {
-            bestVar = var;
+        int midIdx = n / 2;
+        
+        // Compute variance reduction in results if we split at median
+        double leftMean = 0.0, rightMean = 0.0;
+        for (int i = 0; i < midIdx; ++i) leftMean += sortedPoints[i].first;
+        for (int i = midIdx; i < n; ++i) rightMean += sortedPoints[i].first;
+        leftMean /= midIdx;
+        rightMean /= (n - midIdx);
+        
+        double leftVar = 0.0, rightVar = 0.0;
+        for (int i = 0; i < midIdx; ++i) {
+            double diff = sortedPoints[i].first - leftMean;
+            leftVar += diff * diff;
+        }
+        for (int i = midIdx; i < n; ++i) {
+            double diff = sortedPoints[i].first - rightMean;
+            rightVar += diff * diff;
+        }
+        
+        // Split quality: weighted variance reduction (lower is better)
+        double splitQuality = -(leftVar + rightVar) / n;
+
+        if (splitQuality > bestSplitQuality) {
+            bestSplitQuality = splitQuality;
             bestDim = d;
         }
     }
@@ -215,5 +328,3 @@ void QueryTree::update_prediction(const std::vector<int>& query, double result) 
     if (nextLeaf.second == target) nextLeaf = {{}, nullptr};
     target->points.clear();
 }
-
-
