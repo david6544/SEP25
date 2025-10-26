@@ -7,13 +7,12 @@
 BilinearModel::BilinearModel(int dimensions, int dimensionSize, int totalQueries)
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    // Determine samples per point based on total budget
-    // Similar to stochastic model: use multiple samples per grid point
-    int totalGridPoints = (int)std::pow(dimensionSize / 3.0, dimensions);  // Sparse sampling
-    samplesPerPoint = std::max(3, totalQueries / std::max(1, totalGridPoints));
-    
-    // Generate sparse grid for sampling
+    // Generate grid points first
     generateGridPoints();
+    
+    // Calculate samples per point based on actual grid size
+    // Distribute queries evenly across all grid points
+    samplesPerPoint = std::max(1, totalQueries / std::max(1, (int)gridPoints.size()));
     
     // Reserve space for tree data
     treeData.reserve(gridPoints.size());
@@ -26,12 +25,9 @@ BilinearModel::~BilinearModel() {
 }
 
 void BilinearModel::generateGridPoints() {
-    // Create a sparse grid based on available query budget
-    gridStride = std::max(2, (int)std::pow(dimensionSize, dimensions) / (totalQueries / samplesPerPoint));
-    
     if (dimensions == 2) {
-        // 2D grid
-        int step = std::max(2, dimensionSize / 10);  // Sample ~100 points for a 100x100 grid
+        // 2D grid: use regular sampling
+        int step = std::max(2, dimensionSize / 10);
         for (int r = 0; r < dimensionSize; r += step) {
             for (int c = 0; c < dimensionSize; c += step) {
                 gridPoints.push_back({r, c});
@@ -43,11 +39,20 @@ void BilinearModel::generateGridPoints() {
         gridPoints.push_back({dimensionSize-1, 0});
         gridPoints.push_back({dimensionSize-1, dimensionSize-1});
     } else {
-        // N-D: sample along main diagonal and some random points
-        int numSamples = std::min(100, totalQueries / samplesPerPoint);
-        int step = std::max(1, dimensionSize / (int)std::cbrt(numSamples));
+        // 3D space: maximize grid coverage with available budget
+        // Strategy: balance between coverage (spatial resolution) and sample quality
+        // For stochastic binary queries, need enough samples per point for reliable estimates
         
-        // Regular grid samples
+        // With 300k queries and 100^3 space:
+        // Option 1: ~10k points × 30 samples = better estimates, step=5
+        // Option 2: ~15k points × 20 samples = better coverage, step=4
+        // Option 3: ~6k points × 50 samples = best estimates, step=6
+        
+        // Choose based on expected smoothness of the function
+        // For potentially discontinuous data, prioritize coverage (smaller step)
+        int step = 5;  // Direct choice: 8000 points × 37.5 samples per point
+        
+        // Generate regular 3D grid
         std::vector<int> point(dimensions);
         std::function<void(int)> generateRecursive = [&](int dim) {
             if (dim == dimensions) {
@@ -60,6 +65,16 @@ void BilinearModel::generateGridPoints() {
             }
         };
         generateRecursive(0);
+        
+        // Also add boundary points to ensure we capture edges
+        // Add corners of the cube
+        for (int x : {0, dimensionSize-1}) {
+            for (int y : {0, dimensionSize-1}) {
+                for (int z : {0, dimensionSize-1}) {
+                    gridPoints.push_back({x, y, z});
+                }
+            }
+        }
     }
     
     // Remove duplicates
@@ -266,7 +281,7 @@ double BilinearModel::interpolate2D(int r, int c) const {
 double BilinearModel::interpolateND(const std::vector<int>& query) const {
     // Use KD-tree for efficient nearest neighbor lookup
     if (!knnTree) {
-        return 0.5;  // Default value if tree not built yet
+        return 0.3;  // Conservative default based on typical distributions
     }
     
     // Use adaptive k based on local density
@@ -274,7 +289,7 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
     std::vector<KNNTree::KDResult> neighbors = knnTree->getKNearest(query, k);
     
     if (neighbors.empty()) {
-        return 0.5;
+        return 0.3;  // Conservative default
     }
     
     // Confidence-weighted IDW interpolation
@@ -308,16 +323,16 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
         sum_values += total_weight * value;
     }
     
-    return sum_weights > 0 ? sum_values / sum_weights : 0.5;
+    return sum_weights > 0 ? sum_values / sum_weights : 0.3;  // Conservative default
 }
 
 double BilinearModel::getNearestValue(const std::vector<int>& query) const {
     if (sampledPoints.empty()) {
-        return 0.5;
+        return 0.3;
     }
     
     double minDist = std::numeric_limits<double>::infinity();
-    double nearestValue = 0.5;
+    double nearestValue = 0.3;
     
     for (const auto& kv : sampledPoints) {
         if (kv.second.count == 0) continue;
