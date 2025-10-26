@@ -1,7 +1,7 @@
 #pragma once
 #include "Model.hpp"
 #include "Querying/QueryTree.hpp"
-#include "Mapping/LinearStochastic.hpp"
+// #include "Mapping/LinearStochastic.hpp"
 #include "Mapping/IDW.hpp"
 
 #include <unordered_map>
