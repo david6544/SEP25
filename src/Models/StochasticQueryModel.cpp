@@ -6,13 +6,13 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    priorProb = 0.4; // approximate mid point
-    shrinkFactor = 0.5;
-    shouldQuery = 80;
+    priorProb = 0.35; // initial guess for unknown points
+    shrinkFactor = 0.5; // how strongly we shrink toward the prior
+    shouldQuery = 100;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
-    // shouldQuery = 4 * shouldQuery;
+    shouldQuery = 1*shouldQuery;
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
@@ -101,38 +101,53 @@ std::vector<int> StochasticQueryModel::get_next_query() {
 }
 
 
+// Add a prior probability member to your class
+
+
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     if (result >= 0.9) wCount++;
     tCount++;
 
-    if (tCount >= shouldQuery || currentQuery == totalQueries || ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
+    if (tCount >= shouldQuery || currentQuery == totalQueries || 
+       ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
+        
+        // compute raw probability
         double rawProb = double(wCount) / tCount;
-        queryWinTotal[currentQueryIDX] = {wCount, tCount};
-        double currentProb = shrinkFactor * rawProb + (1 - shrinkFactor) * priorProb;
-        qt->update_prediction(currentQueryPoint, currentProb);
+
+        // shrink toward prior to reduce variance
+        double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
+
+        queryWinTotal[currentQueryIDX] = { wCount, tCount };
+        qt->update_prediction(currentQueryPoint, prob);
+
+        // reset counters
         wCount = tCount = repeatQueries = 0;
     }
 
-    // When we've processed all overall queries, build the interpolator
     if (currentQuery >= totalQueries) {
+        // build interpolator
+        data.clear();
         for (int i = 0; i < queryWinTotal.size(); i++) {
             if (queryWinTotal[i].empty()) continue;
+
             double rawProb = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
             double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
 
-            // Avoiding extremes
+            // clamp predictions to avoid extremes
             prob = std::clamp(prob, 0.05, 0.95);
 
             std::vector<int> cQ = unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize));
             data.emplace_back(prob, cQ);
 
-            // For handing cylindrical. Wrap around for y-dimension.
+            // optional wraparound for Y-dimension
             cQ[1] -= dimensionSize;
             data.emplace_back(prob, cQ);
             cQ[1] += 2 * dimensionSize;
             data.emplace_back(prob, cQ);
         }
-        maper = new IDW(data, 14, 1.4, 0.1);
+
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
+        maper = new IDW(data, neigh, 1, 0.1);
     }
 }
 
