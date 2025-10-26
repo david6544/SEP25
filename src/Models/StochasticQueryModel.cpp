@@ -6,7 +6,7 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 600;
+    shouldQuery = 100;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
@@ -99,34 +99,61 @@ std::vector<int> StochasticQueryModel::get_next_query() {
 }
 
 
+// Add a prior probability member to your class
+double priorProb = 0.4; // initial guess for unknown points
+double shrinkFactor = 0.5; // how strongly we shrink toward the prior
+
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     if (result >= 0.9) wCount++;
     tCount++;
 
-    if (tCount >= shouldQuery || currentQuery == totalQueries || ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
-        queryWinTotal[currentQueryIDX] = {wCount, tCount};
-        double currentProb = double(wCount) / tCount;
-        qt->update_prediction(currentQueryPoint, currentProb);
+    if (tCount >= shouldQuery || currentQuery == totalQueries || 
+       ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
+        
+        // compute raw probability
+        double rawProb = double(wCount) / tCount;
+
+        // shrink toward prior to reduce variance
+        double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
+
+        queryWinTotal[currentQueryIDX] = { wCount, tCount };
+        qt->update_prediction(currentQueryPoint, prob);
+
+        // reset counters
         wCount = tCount = repeatQueries = 0;
     }
 
-    // When we've processed all overall queries, build the interpolator
     if (currentQuery >= totalQueries) {
+        // build interpolator
+        data.clear();
         for (int i = 0; i < queryWinTotal.size(); i++) {
             if (queryWinTotal[i].empty()) continue;
-            double prob = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
+
+            double rawProb = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
+            double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
+
+            // clamp predictions to avoid extremes
+            prob = std::clamp(prob, 0.05, 0.95);
+
             std::vector<int> cQ = unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize));
             data.emplace_back(prob, cQ);
+
+            // optional wraparound for Y-dimension
             cQ[1] -= dimensionSize;
             data.emplace_back(prob, cQ);
             cQ[1] += 2 * dimensionSize;
             data.emplace_back(prob, cQ);
         }
+
         int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
         maper = new IDW(data, neigh, 1, 0.1);
     }
 }
 
+// Modified get_value_at to fallback to prior if IDW is not ready
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
-    return maper->predict(query);
+    if (!maper) return priorProb; // fallback
+    double val = maper->predict(query);
+    // clamp predictions
+    return std::clamp(val, 0.05, 0.95);
 }
