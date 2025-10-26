@@ -109,7 +109,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
     tCount++;
 
     if (tCount >= shouldQuery || currentQuery == totalQueries || 
-       ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
+       ((tCount > 0.75 * shouldQuery) && (wCount <= 0.1 * tCount || wCount <= 0.1 * tCount))) {
         
         // compute raw probability
         double rawProb = double(wCount) / tCount;
