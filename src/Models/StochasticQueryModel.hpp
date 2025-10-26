@@ -26,6 +26,7 @@ private:
     int wCount = 0, tCount = 0;
     double scaleRatio = 1, invScale = 1;
     int scaledSize = 1;
+    double priorProb, shrinkFactor; // Scaling for optimisation
 
     int currentQueryIDX;
     std::vector<int> currentQueryPoint;

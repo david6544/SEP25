@@ -29,6 +29,7 @@ private:
     TreeNode* root;
     std::set<TreeNode*> leaves;
     int dims, dimSize, leafSize;
+    int totalQueries;
     std::mt19937 rng{std::random_device{}()};
 
     TreeNode* find_leaf(TreeNode* node, const std::vector<int>& query);
