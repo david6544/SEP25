@@ -47,7 +47,7 @@ double LinearStochastic::predict(std::vector<int> query) {
     int dims = query.size();
 
     // Step 1: Get nearest neighbours (we use them only to derive local bounds)
-    auto neighbors = this->knnTree->getKNearest(query, this->maxNeighbours);
+    auto neighbors = this->knnTree->getKNearest(query, 1 << dims);
     if (neighbors.empty()) return this->offset;
 
     // Step 2: For each dimension, find min and max (two closest unique points)
