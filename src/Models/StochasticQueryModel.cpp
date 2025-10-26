@@ -6,11 +6,11 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 20;
+    shouldQuery = 40;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
-    shouldQuery = 2 * shouldQuery;
+    shouldQuery = shouldQuery;
     qt = new QueryTree(dimensions, scaledSize, 10);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
@@ -122,8 +122,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             cQ[1] += 2 * dimensionSize;
             data.emplace_back(prob, cQ);
         }
-        int neigh = std::clamp(0.01 * data.size(), 2.0, 20.0);
-        maper = new IDW(data, neigh, 2, 0.1);
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
+        maper = new IDW(data, neigh, 1, 0.1);
     }
 }
 
