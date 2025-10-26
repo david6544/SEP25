@@ -108,5 +108,5 @@ double LinearStochastic::predict(std::vector<int> query) {
     }
     
 
-    return prediction;
+    return prediction / totalWeight;
 }

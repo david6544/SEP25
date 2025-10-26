@@ -8,4 +8,4 @@ cmake --build build && ./build/sep25_performance 3 10 --output true --rand true
 
 
 cd ./performanceTester/visualisation/
-python3 -m main PerformanceData3:40
+python3 -m main PerformanceData3:50 true
