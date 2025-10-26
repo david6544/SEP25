@@ -3,9 +3,9 @@ cmake ..
 cmake --build .
 cd ..
 rm -rf build-windows && cmake -B build-windows -S . -DCMAKE_TOOLCHAIN_FILE=windows-toolchain.cmake -DCMAKE_BUILD_TYPE=Release &&  cmake --build build-windows
-cmake --build build && ./build/sep25_performance 3 10 --output true --rand true
+cmake --build build && ./build/sep25_performance 3 100 --output true --rand true
 
 
 
 cd ./performanceTester/visualisation/
-python3 -m main PerformanceData3:50 true
+python3 -m main PerformanceData3:100

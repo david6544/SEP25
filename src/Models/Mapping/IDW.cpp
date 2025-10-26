@@ -1,36 +1,51 @@
 #include "IDW.hpp"
+#include <cmath>
+#include <limits>
 
-
-IDW::IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, double power, double offset) : Mapping(data){
+IDW::IDW(std::vector<std::pair<double, std::vector<int>>>& data,
+         int maxNeighbours,
+         double power,
+         double offset)
+    : Mapping(data),
+      maxNeighbours(maxNeighbours),
+      power(power),
+      offset(offset) 
+{
     this->knnTree = new KNNTree(this->queriedPoints);
-    this->maxNeighbours = maxNeighbours;
-    this->power = power;
-    this->offset = offset;
 }
 
-IDW::~IDW(){
+IDW::~IDW() {
     delete knnTree;
 }
 
 double IDW::predict(std::vector<int> query) {
-    size_t dim = query.size();
-    float numerator = 0.0f;
-    float denominator = 0.0f;
-    const float EPS = 1e-6f; // avoid division by zero
+    constexpr double EPS = 1e-9; // prevent divide-by-zero
+    double numerator = 0.0;
+    double denominator = 0.0;
 
-    std::vector<KNNTree::KDResult> relevantPoints = knnTree->getKNearest(query, this->maxNeighbours);
-    
+    auto relevantPoints = knnTree->getKNearest(query, this->maxNeighbours);
+    if (relevantPoints.empty()) return 0.0;
+
+    double localDensity = relevantPoints.back().distance / relevantPoints.front().distance;
+    double adaptivePower = this->power * std::log1p(localDensity);
+
+
     for (const auto& pv : relevantPoints) {
-        const std::vector<int>& coords = pv.point;
-        
-        if (offset == 0 && (pv.distance < EPS || pv.point == query)) return pv.value;
-        
-        float weight = 1;
-        if (pv.distance > offset) weight = 1.0f / std::pow(pv.distance, this->power);
+        // If query exactly matches a known point, return its value directly
+        if (pv.distance < EPS)
+            return pv.value;
+
+        // Efficient weight calculation
+        double d = std::max(pv.distance, offset);
+        double weight = 1.0 / std::pow(d, adaptivePower);
+
         numerator += weight * pv.value;
         denominator += weight;
     }
-    
+
+    // Avoid division by zero (shouldn’t happen, but just in case)
+    if (denominator < EPS)
+        return 0.0;
+
     return numerator / denominator;
 }
-
