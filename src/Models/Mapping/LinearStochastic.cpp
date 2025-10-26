@@ -46,7 +46,7 @@ double LinearStochastic::predict(std::vector<int> query) {
     int dims = query.size();
 
     // Step 1: Get nearest neighbours
-    auto neighbors = this->knnTree->getKNearest(query, this->maxNeighbours * 4);
+    auto neighbors = this->knnTree->getKNearest(query, this->maxNeighbours);
     if (neighbors.empty()) return this->offset;
 
     // Step 2: Construct design matrix X and target vector y for WLS
