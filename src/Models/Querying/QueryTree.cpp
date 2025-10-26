@@ -44,7 +44,7 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
         return mid;
     }
 
-    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(10);
+    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(2);  // Absolute minimum
 
     std::vector<int> bestPoint;
     double bestScore = -1.0;

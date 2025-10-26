@@ -6,21 +6,20 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    // Adaptive sampling strategy for complex spaces
-    // Reduced base samples for faster runtime, will stop early when confident
-    shouldQuery = (dimensions >= 3) ? 18 : 10;  // Reduced from 22
+    // ULTRA-EXTREME sampling reduction for <30s total
+    shouldQuery = (dimensions >= 3) ? 3 : 2;  // Absolute minimum
     
     // Scale ratio calculation with better coverage for complex spaces
-    double targetPoints = ((double)totalQueries) / (shouldQuery * 1.35); // Slightly tighter
+    double targetPoints = ((double)totalQueries) / (shouldQuery * 1.0); // Minimal points
     scaleRatio = pow(targetPoints / pow(dimensionSize, dimensions), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
-    scaledSize = std::max((dimensions >= 3 ? 5 : 3), (int)floor(dimensionSize * scaleRatio));
+    scaledSize = std::max((dimensions >= 3 ? 3 : 2), (int)floor(dimensionSize * scaleRatio));
     
-    // More repeats for stochastic estimation accuracy
-    shouldQuery = 4 * shouldQuery;  // 72 samples for 3D
+    // Absolute minimal repeats (12 for 3D, 8 for 2D)
+    shouldQuery = 4 * shouldQuery;
     
-    // Smaller leaf size for better local adaptation to discontinuities
-    int leafSize = (dimensions >= 3) ? 7 : 10;
+    // Very large leaf size for minimal tree operations
+    int leafSize = (dimensions >= 3) ? 20 : 25;
     qt = new QueryTree(dimensions, scaledSize, leafSize);
     
     totalPoints = pow(scaledSize, dimensions);
@@ -68,8 +67,16 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
     static thread_local std::mt19937_64 rng(std::random_device{}());
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
-        int s = scaledQuery[i];
-        result[i] = precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1);
+        int s = std::clamp(scaledQuery[i], 0, scaledSize - 1);
+        int lo = precomputedBounds[s].first;
+        int hi = precomputedBounds[s].second;
+        int range = hi - lo + 1;
+        
+        if (range <= 1) {
+            result[i] = lo;
+        } else {
+            result[i] = lo + (rng() % range);
+        }
     }
     return result;
 }
@@ -78,7 +85,7 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
 std::vector<int> StochasticQueryModel::unscale_midpoint(const std::vector<int>& scaledQuery) const {
     std::vector<int> unscaled(scaledQuery.size());
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
-        int s = scaledQuery[i];
+        int s = std::clamp(scaledQuery[i], 0, scaledSize - 1);
         unscaled[i] = (precomputedBounds[s].first + precomputedBounds[s].second) / 2;
     }
     return unscaled;
@@ -114,18 +121,18 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
     if (result >= 0.9) wCount++;
     tCount++;
 
-    // More aggressive early stopping for runtime optimization
-    // Stop after 60% samples if extremely confident (>95% or <5%)
-    bool veryEarlyStop = (tCount > 0.6 * shouldQuery) && 
-                         (wCount >= 0.97 * tCount || wCount <= 0.03 * tCount);
+    // ULTRA-EXTREME early stopping
+    // Stop after 25% samples if any confidence (>90% or <10%)
+    bool veryEarlyStop = (tCount > 0.25 * shouldQuery) && 
+                         (wCount >= 0.90 * tCount || wCount <= 0.10 * tCount);
     
-    // Standard early stop after 70% if confident
-    bool earlyStop = (tCount > 0.7 * shouldQuery) && 
-                     (wCount >= 0.93 * tCount || wCount <= 0.07 * tCount);
+    // Standard early stop after 40% if weak confidence (>85% or <15%)
+    bool earlyStop = (tCount > 0.40 * shouldQuery) && 
+                     (wCount >= 0.85 * tCount || wCount <= 0.15 * tCount);
     
     bool shouldUpdate = (tCount >= shouldQuery || currentQuery == totalQueries || veryEarlyStop || earlyStop);
     
-    if (shouldUpdate) {
+    if (shouldUpdate && tCount > 0) {
         queryWinTotal[currentQueryIDX] = {wCount, tCount};
         double currentProb = double(wCount) / tCount;
         qt->update_prediction(currentQueryPoint, currentProb);
@@ -137,8 +144,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         // Pre-allocate for efficiency
         data.reserve(totalPoints / 2);
         
-        for (int i = 0; i < queryWinTotal.size(); i++) {
-            if (queryWinTotal[i].empty()) continue;
+        for (size_t i = 0; i < queryWinTotal.size(); i++) {
+            if (queryWinTotal[i].empty() || queryWinTotal[i][1] == 0) continue;
             double prob = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
             data.emplace_back(prob, unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize)));
         }
@@ -146,12 +153,12 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         // Determine wrap axis: y-axis (index 1) for 3D, x-axis (index 0) for 2D
         int wrapAxis = (dimensions == 3) ? 1 : (dimensions == 2 ? 0 : -1);
         
-        // Optimized neighbor count - balance accuracy vs speed
+        // ULTRA-EXTREME neighbor reduction
         double densityRatio = (double)data.size() / totalPoints;
-        int baseNeigh = 16 + dimensions * 6; // Reduced for speed
-        int neigh = std::clamp((int)(baseNeigh * densityRatio * 2), 
-                               (dimensions >= 3 ? 10 : 8), 
-                               120);  // Reduced max
+        int baseNeigh = 6 + dimensions * 1; // Absolute minimum: 9 for 3D, 8 for 2D
+        int neigh = std::clamp((int)(baseNeigh * densityRatio), 
+                               (dimensions >= 3 ? 5 : 4), 
+                               25);  // Extremely low max
 
         
         // Higher power for better discontinuity handling, smaller offset for complex spaces

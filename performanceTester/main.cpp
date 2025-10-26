@@ -13,6 +13,9 @@
 #elif defined(STOCTREE)
     #include "../src/Models/StochasticQueryModel.hpp"
     #define CurrentModel StochasticQueryModel
+#elif defined(BILINEAR)
+    #include "../src/Models/BilinearModel.hpp"
+    #define CurrentModel BilinearModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif

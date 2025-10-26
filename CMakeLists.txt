@@ -3,7 +3,8 @@ project(SEP25 VERSION 0.1.0 LANGUAGES CXX)
 
 # Selected Algorithm (change text in " ")
 # set(ALGORITHM "DUMB")
-set(ALGORITHM "STOCTREE")
+# set(ALGORITHM "STOCTREE")
+set(ALGORITHM "BILINEAR")
 
 # Detect if building natively or with a toolchain
 if(CMAKE_TOOLCHAIN_FILE)
