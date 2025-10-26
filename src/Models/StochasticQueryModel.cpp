@@ -10,8 +10,8 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
-    shouldQuery = 2 * shouldQuery;
-    qt = new QueryTree(dimensions, scaledSize, 10);
+    shouldQuery = 4 * shouldQuery;
+    qt = new QueryTree(dimensions, scaledSize, 20);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
     
