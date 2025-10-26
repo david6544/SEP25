@@ -11,7 +11,7 @@ private:
     double offset;
 
 public:
-    IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, int power, double offset = 0);
+    IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, double power, double offset = 0);
 
     ~IDW();
 

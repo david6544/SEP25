@@ -1,7 +1,7 @@
 #include "IDW.hpp"
 
 
-IDW::IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, int power, double offset) : Mapping(data){
+IDW::IDW(std::vector<std::pair<double, std::vector<int>>>& data, int maxNeighbours, double power, double offset) : Mapping(data){
     this->knnTree = new KNNTree(this->queriedPoints);
     this->maxNeighbours = maxNeighbours;
     this->power = power;
