@@ -119,6 +119,7 @@ void BilinearModel::update_prediction(const std::vector<int>& query, double resu
         gp.coords = query;
     }
     gp.sum += result;
+    gp.sum_squares += result * result;  // Track sum of squares for variance
     gp.count++;
     
     // Build KD-tree after all sampling is complete (when we've sampled all grid points)
@@ -156,13 +157,15 @@ void BilinearModel::rebuildKDTree() {
         knnTree = nullptr;
     }
     
-    // Build data vector for KD-tree
+    // Build data vector for KD-tree and cache confidence scores
     treeData.clear();
     treeData.reserve(sampledPoints.size());
+    confidenceCache.clear();
     
     for (const auto& kv : sampledPoints) {
         if (kv.second.count > 0) {
             treeData.push_back({kv.second.average(), kv.second.coords});
+            confidenceCache[kv.first] = kv.second.confidence();  // Cache confidence by index
         }
     }
     
@@ -266,15 +269,15 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
         return 0.5;  // Default value if tree not built yet
     }
     
-    // Find k nearest neighbors using KD-tree (O(log N) instead of O(N))
-    const int k = std::min(8, (int)treeData.size());  // Use 8 neighbors for better interpolation
+    // Use adaptive k based on local density
+    const int k = getAdaptiveK(query);
     std::vector<KNNTree::KDResult> neighbors = knnTree->getKNearest(query, k);
     
     if (neighbors.empty()) {
         return 0.5;
     }
     
-    // IDW interpolation with inverse squared distance weighting
+    // Confidence-weighted IDW interpolation
     double sum_weights = 0.0;
     double sum_values = 0.0;
     
@@ -287,10 +290,22 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
             return value;
         }
         
-        // Inverse squared distance weighting
-        double weight = 1.0 / (dist * dist);
-        sum_weights += weight;
-        sum_values += weight * value;
+        // Get cached confidence score for this neighbor
+        int idx = coordsToIndex(neighbor.point);
+        double confidence = 1.0;  // Default confidence
+        
+        auto conf_it = confidenceCache.find(idx);
+        if (conf_it != confidenceCache.end()) {
+            confidence = conf_it->second;
+        }
+        
+        // Inverse squared distance weighting, modulated by confidence
+        // Higher confidence = more weight, lower confidence = less weight
+        double dist_weight = 1.0 / (dist * dist);
+        double total_weight = dist_weight * (0.5 + 0.5 * confidence);  // confidence factor: 0.5 to 1.0
+        
+        sum_weights += total_weight;
+        sum_values += total_weight * value;
     }
     
     return sum_weights > 0 ? sum_values / sum_weights : 0.5;
@@ -320,6 +335,50 @@ double BilinearModel::getNearestValue(const std::vector<int>& query) const {
     }
     
     return nearestValue;
+}
+
+int BilinearModel::getAdaptiveK(const std::vector<int>& query) const {
+    if (!knnTree || treeData.empty()) {
+        return 8;  // Default k
+    }
+    
+    // Sample a few nearest neighbors to estimate local density
+    const int sample_k = std::min(4, (int)treeData.size());
+    std::vector<KNNTree::KDResult> sample = knnTree->getKNearest(query, sample_k);
+    
+    if (sample.empty()) return 8;
+    
+    // Calculate average distance to nearest neighbors
+    double avg_dist = 0.0;
+    for (const auto& neighbor : sample) {
+        avg_dist += neighbor.distance;
+    }
+    avg_dist /= sample.size();
+    
+    // Adaptive k based on local density:
+    // - Sparse regions (large avg_dist): use more neighbors (up to 32)
+    // - Dense regions (small avg_dist): use fewer neighbors (down to 4)
+    
+    // Normalize distance by dimension size
+    double normalized_dist = avg_dist / (dimensionSize * std::sqrt(dimensions));
+    
+    int adaptive_k;
+    if (normalized_dist > 0.3) {
+        // Sparse region - use many neighbors
+        adaptive_k = 32;
+    } else if (normalized_dist > 0.15) {
+        // Medium density
+        adaptive_k = 16;
+    } else if (normalized_dist > 0.05) {
+        // Dense region
+        adaptive_k = 8;
+    } else {
+        // Very dense region
+        adaptive_k = 4;
+    }
+    
+    // Ensure k doesn't exceed available data
+    return std::min(adaptive_k, (int)treeData.size());
 }
 
 #endif // BILINEAR || TESTING

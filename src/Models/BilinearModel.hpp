@@ -32,10 +32,25 @@ private:
     struct GridPoint {
         std::vector<int> coords;
         double sum = 0.0;
+        double sum_squares = 0.0;  // For variance calculation
         int count = 0;
         
         double average() const {
             return count > 0 ? sum / count : -1.0;  // -1 indicates no data
+        }
+        
+        double variance() const {
+            if (count < 2) return 0.0;
+            double mean = sum / count;
+            return (sum_squares / count) - (mean * mean);
+        }
+        
+        double confidence() const {
+            // Higher count and lower variance = higher confidence
+            if (count == 0) return 0.0;
+            double var = variance();
+            // Confidence score: reduces with variance, increases with sample count
+            return count / (1.0 + var);
         }
     };
 
@@ -43,6 +58,7 @@ private:
     std::unordered_map<int, GridPoint> sampledPoints;  // key = linearized index
     KNNTree* knnTree = nullptr;  // KD-tree for efficient nearest neighbor queries
     std::vector<std::pair<double, std::vector<int>>> treeData;  // Data for rebuilding tree
+    std::unordered_map<int, double> confidenceCache;  // Cache confidence scores by index
     
     // Query generation
     int currentQueryPoint = 0;
@@ -60,6 +76,7 @@ private:
     void generateGridPoints();
     void rebuildKDTree();  // Rebuild KD-tree after sampling phase
     double getNearestValue(const std::vector<int>& query) const;
+    int getAdaptiveK(const std::vector<int>& query) const;  // Adaptive k based on local density
     
     // 2D-specific interpolation helpers
     double interpolate2D(int r, int c) const;
