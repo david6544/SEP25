@@ -9,7 +9,6 @@ LinearStochastic::LinearStochastic(std::vector<std::pair<double, std::vector<int
     this->queriedPoints = data;
     this->knnTree = new KNNTree(this->queriedPoints);
     this->maxNeighbours = maxNeighbours;
-    std::cout << maxNeighbours << std::endl;
     this->power = power;
     this->offset = offset;
 }
