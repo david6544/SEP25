@@ -8,7 +8,7 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     
     priorProb = 0.35; // initial guess for unknown points
     shrinkFactor = 0.8; // how strongly we shrink toward the prior
-    shouldQuery = 100;
+    shouldQuery = 50;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
@@ -147,8 +147,9 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
         }
 
         // int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
-        int neigh = 3;
-        maper = new IDW(data, neigh, 1.5, 0.1);
+        // int neigh = 3;
+        // maper = new IDW(data, neigh, 1.5, 0.1);
+        maper = new LinearStochastic(data, 1 << dimensions, 1, 0.1);
     }
 }
 
