@@ -55,13 +55,14 @@ std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& r
 }
 
 std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const std::vector<int>& scaledQuery) const{
-    return unscale_midpoint(scaledQuery);
     std::vector<int> result(scaledQuery.size());
     static thread_local std::mt19937_64 rng(std::random_device{}());
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
         int s = scaledQuery[i];
-        result[i] = precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1);
+        int r1 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/2;
+        int r2 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/2;
+        result[i] = r1 + r2;
     }
     return result;
 }
