@@ -8,7 +8,7 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     
     priorProb = 0.35; // initial guess for unknown points
     shrinkFactor = 0.8; // how strongly we shrink toward the prior
-    shouldQuery = 50;
+    shouldQuery = 80;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
@@ -60,7 +60,8 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
         int s = scaledQuery[i];
-        result[i] = precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1);
+        // result[i] = precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1);
+        result[i] = precomputedBounds[s].first + (precomputedBounds[s].second - precomputedBounds[s].first) / 2;
     }
     return result;
 }
