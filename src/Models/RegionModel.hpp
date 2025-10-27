@@ -82,8 +82,11 @@ private:
     int currentQuery = 0;
     std::queue<std::vector<int>> queryQueue;  // Points to sample next
     std::vector<int> currentPoint;
-    int samplesPerPoint = 3;  // Stochastic samples per location
+    int samplesPerPoint = 3;  // Stochastic samples per location (adaptive)
     int repeatQueries = 0;
+    
+    // Adaptive sampling parameters
+    int getAdaptiveSamples(const std::vector<int>& point);
     
     // Boundary detection
     std::unordered_set<int> boundaryPoints;
@@ -92,6 +95,7 @@ private:
     // Helper functions
     int coordsToIndex(const std::vector<int>& coords) const;
     std::vector<int> indexToCoords(int index) const;
+    double distance_with_wrapping(const std::vector<int>& a, const std::vector<int>& b) const;
     
     // Phase-specific logic
     void generateInitialGrid();

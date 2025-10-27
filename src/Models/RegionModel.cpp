@@ -36,6 +36,58 @@ std::vector<int> RegionModel::indexToCoords(int index) const {
     return coords;
 }
 
+// OPTIMIZATION 3: Adaptive samples per point based on context
+int RegionModel::getAdaptiveSamples(const std::vector<int>& point) {
+    int idx = coordsToIndex(point);
+    auto it = sampledPoints.find(idx);
+    
+    // Initial grid: 5-7 samples (enough to detect discontinuity)
+    if (current_phase == Phase::INITIAL_GRID) {
+        return 5;
+    }
+    
+    // Boundary walking: 8-10 samples (high confidence needed)
+    if (current_phase == Phase::BOUNDARY_WALKING) {
+        return 8;
+    }
+    
+    // Region filling: adaptive based on variance
+    if (current_phase == Phase::REGION_FILLING) {
+        if (it != sampledPoints.end() && it->second.count > 0) {
+            double var = it->second.variance();
+            if (var > 0.2) return 10;  // High variance = uncertain
+            if (var > 0.1) return 7;   // Medium variance
+            return 5;                   // Low variance = smooth region
+        }
+        return 5;  // Default for new points
+    }
+    
+    // Pattern matching: fewer samples (12-15 for uncertain areas)
+    if (current_phase == Phase::PATTERN_MATCHING) {
+        if (it != sampledPoints.end() && it->second.count > 0) {
+            double var = it->second.variance();
+            if (var > 0.2) return 12;  // Very uncertain
+            return 3;                   // Already have data
+        }
+        return 5;
+    }
+    
+    return 5;  // Default fallback
+}
+
+// OPTIMIZATION 2: Distance calculation with Y-axis wrapping
+double RegionModel::distance_with_wrapping(const std::vector<int>& a, const std::vector<int>& b) const {
+    double d = 0.0;
+    for (int i = 0; i < dimensions; i++) {
+        double diff = std::abs(a[i] - b[i]);
+        if (i == 1 && dimensions == 3) {  // Y-axis wraps in 3D
+            diff = std::min(diff, dimensionSize - diff);
+        }
+        d += diff * diff;
+    }
+    return std::sqrt(d);
+}
+
 void RegionModel::generateInitialGrid() {
     // Phase 1: Coarse grid sampling to detect discontinuities
     // Use ~10-20% of budget for initial exploration
@@ -110,11 +162,12 @@ std::vector<int> RegionModel::get_next_query() {
         if (!queryQueue.empty()) {
             currentPoint = queryQueue.front();
             queryQueue.pop();
-            repeatQueries = samplesPerPoint;
+            // OPTIMIZATION 3: Use adaptive sampling
+            repeatQueries = getAdaptiveSamples(currentPoint);
         } else {
             // Fallback: sample center if queue empty
             currentPoint = std::vector<int>(dimensions, dimensionSize / 2);
-            repeatQueries = samplesPerPoint;
+            repeatQueries = getAdaptiveSamples(currentPoint);
         }
     }
     
@@ -138,7 +191,8 @@ void RegionModel::update_prediction(const std::vector<int>& query, double result
     
     // If in boundary walking phase, check neighbors for more boundaries
     if (current_phase == Phase::BOUNDARY_WALKING) {
-        if (sp.count >= samplesPerPoint && detectDiscontinuity(query)) {
+        // OPTIMIZATION 3: Check after minimum samples (not full samplesPerPoint)
+        if (sp.count >= 3 && detectDiscontinuity(query)) {
             sp.is_boundary = true;
             
             // Add unvisited neighbors to queue
@@ -155,23 +209,56 @@ void RegionModel::update_prediction(const std::vector<int>& query, double result
 }
 
 bool RegionModel::detectDiscontinuity(const std::vector<int>& point) {
-    // Check if this point is near a discontinuity by examining neighbors
+    // OPTIMIZATION 1: Faster discontinuity detection using variance + face neighbors only
     int idx = coordsToIndex(point);
     auto it = sampledPoints.find(idx);
-    if (it == sampledPoints.end() || it->second.count < samplesPerPoint) {
-        return false;  // Not enough data yet
+    if (it == sampledPoints.end() || it->second.count < 3) {
+        return false;  // Need minimum samples
+    }
+    
+    // High variance indicates stochastic boundary or discontinuity
+    double center_var = it->second.variance();
+    if (center_var > 0.15) {
+        return true;  // High variance = likely boundary
     }
     
     double center_value = it->second.average();
-    auto neighbors = getNeighbors(point, 1);
     
-    for (const auto& neighbor : neighbors) {
+    // Only check 6 face neighbors (not all 26 for 3D) for efficiency
+    std::vector<std::vector<int>> faces;
+    if (dimensions == 3) {
+        int x = point[0], y = point[1], z = point[2];
+        faces = {
+            {x-1, y, z}, {x+1, y, z},  // X-axis faces
+            {x, (y-1+dimensionSize)%dimensionSize, z},  // Y- (wrapped)
+            {x, (y+1)%dimensionSize, z},                // Y+ (wrapped)
+            {x, y, z-1}, {x, y, z+1}   // Z-axis faces
+        };
+    } else {
+        // For other dimensions, use basic neighbors
+        auto neighbors = getNeighbors(point, 1);
+        faces = neighbors;
+    }
+    
+    // Check gradient with face neighbors
+    for (const auto& neighbor : faces) {
+        // Bounds check (Y wraps, so always valid)
+        bool valid = true;
+        for (int i = 0; i < dimensions; i++) {
+            if (i == 1) continue;  // Y wraps
+            if (neighbor[i] < 0 || neighbor[i] >= dimensionSize) {
+                valid = false;
+                break;
+            }
+        }
+        if (!valid) continue;
+        
         int nidx = coordsToIndex(neighbor);
         auto nit = sampledPoints.find(nidx);
-        if (nit != sampledPoints.end() && nit->second.count >= samplesPerPoint) {
+        if (nit != sampledPoints.end() && nit->second.count >= 3) {
             double neighbor_value = nit->second.average();
             
-            // Discontinuity if difference > threshold (e.g., 0.3)
+            // Discontinuity if difference > threshold
             if (std::abs(center_value - neighbor_value) > 0.3) {
                 return true;
             }
@@ -337,18 +424,8 @@ double RegionModel::predictFromNearest(const std::vector<int>& query) {
     double sum_weights = 0.0;
     
     for (const auto& neighbor : neighbors) {
-        double dist = neighbor.distance;
-        // Account for Y-axis wrapping in distance
-        if (dimensions == 3) {
-            int dy = std::abs(query[1] - neighbor.point[1]);
-            dy = std::min(dy, dimensionSize - dy);  // Wrapped distance
-            // Recalculate distance with wrapped y
-            dist = std::sqrt(
-                std::pow(query[0] - neighbor.point[0], 2) +
-                std::pow(dy, 2) +
-                std::pow(query[2] - neighbor.point[2], 2)
-            );
-        }
+        // OPTIMIZATION 2: Use wrapped distance for Y-axis
+        double dist = distance_with_wrapping(query, neighbor.point);
         
         double weight = 1.0 / (1.0 + dist);
         sum_weighted += neighbor.value * weight;
