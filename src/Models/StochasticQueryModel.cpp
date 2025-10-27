@@ -1,6 +1,8 @@
 #include "StochasticQueryModel.hpp"
 #include "../InputOutput/InputOutput.hpp"
 
+#include <fstream>
+
 
 
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
@@ -155,5 +157,13 @@ double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
     if (!maper) return priorProb; // fallback
     double val = maper->predict(query);
     // clamp predictions
-    return std::clamp(val, 0.05, 0.95);
+    std::ofstream file("output.txt", std::ios::app);
+    if (!file) {
+        std::cerr << "Error: could not open or create file!" << std::endl;
+        return 1;
+    }
+
+    file << val << "\n"; // Append the double as text
+    file.close();
+    return val;
 }
