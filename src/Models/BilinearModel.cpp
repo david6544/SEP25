@@ -40,17 +40,17 @@ void BilinearModel::generateGridPoints() {
         gridPoints.push_back({dimensionSize-1, dimensionSize-1});
     } else {
         // 3D space: maximize grid coverage with available budget
-        // Strategy: balance between coverage (spatial resolution) and sample quality
-        // For stochastic binary queries, need enough samples per point for reliable estimates
+        // Strategy: For discontinuous/unknown data, prioritize spatial coverage
+        // With 300k queries and 100^3 space, we need balance between:
+        // - Enough samples per point for reliable stochastic estimates (15-20 minimum)
+        // - Enough spatial coverage to capture discontinuities
         
-        // With 300k queries and 100^3 space:
-        // Option 1: ~10k points × 30 samples = better estimates, step=5
-        // Option 2: ~15k points × 20 samples = better coverage, step=4
-        // Option 3: ~6k points × 50 samples = best estimates, step=6
+        // Step 3: 34^3 ≈ 39k points × 7 samples - too few samples, high variance
+        // Step 4: 25^3 = 15.6k points × 19 samples - good coverage, decent samples
+        // Step 5: 20^3 = 8k points × 37 samples - less coverage, better samples
         
-        // Choose based on expected smoothness of the function
-        // For potentially discontinuous data, prioritize coverage (smaller step)
-        int step = 5;  // Direct choice: 8000 points × 37.5 samples per point
+        // For potentially discontinuous data, use smaller step for better coverage
+        int step = 4;  // 15,625 points × 19 samples = better spatial resolution
         
         // Generate regular 3D grid
         std::vector<int> point(dimensions);
@@ -295,6 +295,7 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
     // Confidence-weighted IDW interpolation
     double sum_weights = 0.0;
     double sum_values = 0.0;
+    double max_dist = 0.0;
     
     for (const auto& neighbor : neighbors) {
         double dist = neighbor.distance;
@@ -305,6 +306,29 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
             return value;
         }
         
+        max_dist = std::max(max_dist, dist);
+    }
+    
+    // If we're far from all samples, regress toward the global mean
+    // to avoid over-confident extrapolation
+    double global_mean = 0.3;  // Conservative estimate
+    if (!neighbors.empty() && max_dist > 10.0) {
+        // Calculate sample mean from neighbors
+        double sample_mean = 0.0;
+        for (const auto& neighbor : neighbors) {
+            sample_mean += neighbor.value;
+        }
+        sample_mean /= neighbors.size();
+        
+        // Blend between sample mean and global mean based on distance
+        double blend_factor = std::min(1.0, max_dist / 20.0);  // 0 at dist=0, 1 at dist=20+
+        return sample_mean * (1.0 - blend_factor) + global_mean * blend_factor;
+    }
+    
+    for (const auto& neighbor : neighbors) {
+        double dist = neighbor.distance;
+        double value = neighbor.value;
+        
         // Get cached confidence score for this neighbor
         int idx = coordsToIndex(neighbor.point);
         double confidence = 1.0;  // Default confidence
@@ -314,10 +338,12 @@ double BilinearModel::interpolateND(const std::vector<int>& query) const {
             confidence = conf_it->second;
         }
         
-        // Inverse squared distance weighting, modulated by confidence
-        // Higher confidence = more weight, lower confidence = less weight
-        double dist_weight = 1.0 / (dist * dist);
-        double total_weight = dist_weight * (0.5 + 0.5 * confidence);  // confidence factor: 0.5 to 1.0
+        // Inverse distance weighting (not squared - less aggressive)
+        // This provides smoother interpolation and reduces overfitting to nearest point
+        // Normalize confidence to range [0.7, 1.0] to avoid over-weighting
+        double normalized_confidence = 0.7 + 0.3 * (confidence / std::max(1.0, confidence));
+        double dist_weight = 1.0 / (dist + 1.0);  // Add 1 to avoid division issues
+        double total_weight = dist_weight * normalized_confidence;
         
         sum_weights += total_weight;
         sum_values += total_weight * value;
@@ -357,43 +383,20 @@ int BilinearModel::getAdaptiveK(const std::vector<int>& query) const {
         return 8;  // Default k
     }
     
-    // Sample a few nearest neighbors to estimate local density
-    const int sample_k = std::min(4, (int)treeData.size());
-    std::vector<KNNTree::KDResult> sample = knnTree->getKNearest(query, sample_k);
+    // For regular grid sampling with step=4, we want k=27 (3x3x3 neighborhood)
+    // This captures the local cube around the query point
+    // Using fewer neighbors leads to nearest-neighbor behavior (not interpolation)
+    // Using many more neighbors over-smooths and loses local structure
     
-    if (sample.empty()) return 8;
+    // For 3D with regular grid:
+    // - 8 neighbors = corners of cube (trilinear interpolation)
+    // - 27 neighbors = 3x3x3 cube (better for irregular or missing data)
+    // - 64 neighbors = 4x4x4 cube (smooths too much)
     
-    // Calculate average distance to nearest neighbors
-    double avg_dist = 0.0;
-    for (const auto& neighbor : sample) {
-        avg_dist += neighbor.distance;
-    }
-    avg_dist /= sample.size();
-    
-    // Adaptive k based on local density:
-    // - Sparse regions (large avg_dist): use more neighbors (up to 32)
-    // - Dense regions (small avg_dist): use fewer neighbors (down to 4)
-    
-    // Normalize distance by dimension size
-    double normalized_dist = avg_dist / (dimensionSize * std::sqrt(dimensions));
-    
-    int adaptive_k;
-    if (normalized_dist > 0.3) {
-        // Sparse region - use many neighbors
-        adaptive_k = 32;
-    } else if (normalized_dist > 0.15) {
-        // Medium density
-        adaptive_k = 16;
-    } else if (normalized_dist > 0.05) {
-        // Dense region
-        adaptive_k = 8;
-    } else {
-        // Very dense region
-        adaptive_k = 4;
-    }
+    int k = (dimensions == 2) ? 9 : 27;  // 3x3 for 2D, 3x3x3 for 3D
     
     // Ensure k doesn't exceed available data
-    return std::min(adaptive_k, (int)treeData.size());
+    return std::min(k, (int)treeData.size());
 }
 
 #endif // BILINEAR || TESTING
