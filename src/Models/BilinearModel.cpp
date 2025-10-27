@@ -60,8 +60,14 @@ void BilinearModel::generateGridPoints() {
         //   + Low variance per point (SE=0.11)
         //   - Poor coverage (1.6%), misses structure
         
-        // For smooth continuous data: prioritize coverage!
-        int step = 3;  // 39,304 points × 7 samples - excellent for smooth functions
+        // For smooth continuous data AND squared error penalty: balance coverage vs accuracy
+        // Squared error heavily penalizes outliers (error^2), so we need:
+        // 1. Better per-point accuracy (more samples) to reduce variance
+        // 2. Still maintain reasonable coverage for interpolation
+        // 
+        // Step 3: 39k points × 7 samples (SE=0.19) - high outlier risk
+        // Step 4: 15.6k points × 19 samples (SE=0.11) - better accuracy, still reasonable coverage
+        int step = 4;  // 15,625 points × 19 samples - better for squared error metric
         
         // Generate regular 3D grid
         std::vector<int> point(dimensions);
@@ -79,8 +85,9 @@ void BilinearModel::generateGridPoints() {
         
         // Also add boundary points to ensure we capture edges
         // Add corners of the cube
+        // Note: Y-axis wraps, so y=0 and y=99 are the same point (don't duplicate)
         for (int x : {0, dimensionSize-1}) {
-            for (int y : {0, dimensionSize-1}) {
+            for (int y : {0}) {  // Only y=0 since y wraps (y=99 is same as y=0)
                 for (int z : {0, dimensionSize-1}) {
                     gridPoints.push_back({x, y, z});
                 }
@@ -301,16 +308,17 @@ double BilinearModel::interpolate2D(int r, int c) const {
     }
     
     // Perform bilinear interpolation
+    double result;
     if (r_left == r_right && c_left == c_right) {
-        return corner_values[0];
+        result = corner_values[0];
     } else if (r_left == r_right) {
         // Interpolate along c
         double frac_c = (double)(c - c_left) / (c_right - c_left);
-        return corner_values[0] * (1.0 - frac_c) + corner_values[1] * frac_c;
+        result = corner_values[0] * (1.0 - frac_c) + corner_values[1] * frac_c;
     } else if (c_left == c_right) {
         // Interpolate along r
         double frac_r = (double)(r - r_left) / (r_right - r_left);
-        return corner_values[0] * (1.0 - frac_r) + corner_values[2] * frac_r;
+        result = corner_values[0] * (1.0 - frac_r) + corner_values[2] * frac_r;
     } else {
         // Full bilinear interpolation
         double frac_r = (double)(r - r_left) / (r_right - r_left);
@@ -319,8 +327,11 @@ double BilinearModel::interpolate2D(int r, int c) const {
         double top = corner_values[0] * (1.0 - frac_c) + corner_values[1] * frac_c;
         double bottom = corner_values[2] * (1.0 - frac_c) + corner_values[3] * frac_c;
         
-        return top * (1.0 - frac_r) + bottom * frac_r;
+        result = top * (1.0 - frac_r) + bottom * frac_r;
     }
+    
+    // Safety clamp
+    return std::max(0.0, std::min(1.0, result));
 }
 
 double BilinearModel::interpolateND(const std::vector<int>& query) const {
@@ -366,7 +377,10 @@ double BilinearModel::getNearestValue(const std::vector<int>& query) const {
         return 0.3;
     }
     
-    // Use KD-tree for O(log n) nearest neighbor lookup instead of O(n) linear search
+    // Use KD-tree for O(log n) nearest neighbor lookup
+    // Note: KD-tree uses Euclidean distance, which doesn't account for Y wrapping
+    // For better accuracy with wrapping, we'd need a custom distance metric
+    // But for fallback cases (rare), standard KD-tree is acceptable
     if (knnTree && !treeData.empty()) {
         auto neighbors = knnTree->getKNearest(query, 1);
         if (!neighbors.empty()) {
@@ -374,7 +388,7 @@ double BilinearModel::getNearestValue(const std::vector<int>& query) const {
         }
     }
     
-    // Fallback to linear search if KD-tree not available (rare)
+    // Fallback to linear search with WRAPPED distance for Y-axis (3D only)
     double minDist = std::numeric_limits<double>::infinity();
     double nearestValue = 0.3;
     
@@ -384,7 +398,14 @@ double BilinearModel::getNearestValue(const std::vector<int>& query) const {
         double dist = 0.0;
         for (int d = 0; d < dimensions; ++d) {
             double diff = query[d] - kv.second.coords[d];
-            dist += diff * diff;
+            
+            // Y-axis wraps in 3D (d=1)
+            if (dimensions == 3 && d == 1) {
+                double wrapped_diff = std::min(std::abs(diff), dimensionSize - std::abs(diff));
+                dist += wrapped_diff * wrapped_diff;
+            } else {
+                dist += diff * diff;
+            }
         }
         
         if (dist < minDist) {
@@ -412,6 +433,7 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
     
     // Get the 8 corner values of the cube
     std::vector<double> corner_values(8);
+    std::vector<double> corner_confidence(8);  // Track confidence for each corner
     std::vector<std::vector<int>> corners = {
         {x0, y0, z0}, {x1, y0, z0},  // bottom face
         {x0, y1, z0}, {x1, y1, z0},
@@ -419,36 +441,61 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
         {x0, y1, z1}, {x1, y1, z1}
     };
     
+    bool all_corners_sampled = true;
     for (size_t i = 0; i < corners.size(); ++i) {
         int idx = coordsToIndex(corners[i]);
         auto it = sampledPoints.find(idx);
         if (it != sampledPoints.end() && it->second.count > 0) {
             corner_values[i] = it->second.average();
+            corner_confidence[i] = it->second.count;  // More samples = higher confidence
         } else {
-            // If corner is missing, use nearest value
-            // This handles edge cases where grid is sparse
+            // Corner missing - this is dangerous for squared error!
+            all_corners_sampled = false;
             corner_values[i] = getNearestValue(corners[i]);
+            corner_confidence[i] = 0.1;  // Low confidence for interpolated corners
+        }
+    }
+    
+    // If any corners are missing, blend with local average to reduce outlier risk
+    if (!all_corners_sampled) {
+        // Calculate confidence-weighted average of available corners
+        double sum_weighted = 0.0;
+        double sum_confidence = 0.0;
+        for (size_t i = 0; i < 8; ++i) {
+            sum_weighted += corner_values[i] * corner_confidence[i];
+            sum_confidence += corner_confidence[i];
+        }
+        double local_avg = sum_confidence > 0 ? sum_weighted / sum_confidence : 0.3;
+        
+        // Blend missing corners toward local average (reduces extreme outliers)
+        for (size_t i = 0; i < 8; ++i) {
+            if (corner_confidence[i] < 1.0) {  // Missing or low-confidence corner
+                // Blend 70% nearest value, 30% local average
+                corner_values[i] = 0.7 * corner_values[i] + 0.3 * local_avg;
+            }
         }
     }
     
     // Handle degenerate cases (point lies on face, edge, or corner)
     if (x0 == x1 && y0 == y1 && z0 == z1) {
         // Point is exactly on a grid point
-        return corner_values[0];
+        return std::max(0.0, std::min(1.0, corner_values[0]));
     }
     
     if (x0 == x1) {
         // Degenerate in x - do bilinear in yz plane
-        if (y0 == y1 && z0 == z1) return corner_values[0];
+        if (y0 == y1 && z0 == z1) return std::max(0.0, std::min(1.0, corner_values[0]));
         if (y0 == y1) {
             // Linear in z only
             double frac_z = (double)(z - z0) / (z1 - z0);
-            return corner_values[0] * (1.0 - frac_z) + corner_values[4] * frac_z;
+            double result = corner_values[0] * (1.0 - frac_z) + corner_values[4] * frac_z;
+            return std::max(0.0, std::min(1.0, result));
         }
         if (z0 == z1) {
             // Linear in y only
             double frac_y = (double)(y - y0) / (y1 - y0);
-            return corner_values[0] * (1.0 - frac_y) + corner_values[2] * frac_y;
+            double result = corner_values[0] * (1.0 - frac_y) + corner_values[2] * frac_y;
+            return std::max(0.0, std::min(1.0, result));
         }
         // Bilinear in yz
         double frac_y = (double)(y - y0) / (y1 - y0);
@@ -461,7 +508,8 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
         
         double v0 = v00 * (1.0 - frac_z) + v01 * frac_z;
         double v1 = v10 * (1.0 - frac_z) + v11 * frac_z;
-        return v0 * (1.0 - frac_y) + v1 * frac_y;
+        double result = v0 * (1.0 - frac_y) + v1 * frac_y;
+        return std::max(0.0, std::min(1.0, result));
     }
     
     if (y0 == y1) {
@@ -469,7 +517,8 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
         if (z0 == z1) {
             // Linear in x only
             double frac_x = (double)(x - x0) / (x1 - x0);
-            return corner_values[0] * (1.0 - frac_x) + corner_values[1] * frac_x;
+            double result = corner_values[0] * (1.0 - frac_x) + corner_values[1] * frac_x;
+            return std::max(0.0, std::min(1.0, result));
         }
         // Bilinear in xz
         double frac_x = (double)(x - x0) / (x1 - x0);
@@ -482,7 +531,8 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
         
         double v0 = v00 * (1.0 - frac_z) + v01 * frac_z;
         double v1 = v10 * (1.0 - frac_z) + v11 * frac_z;
-        return v0 * (1.0 - frac_x) + v1 * frac_x;
+        double result = v0 * (1.0 - frac_x) + v1 * frac_x;
+        return std::max(0.0, std::min(1.0, result));
     }
     
     if (z0 == z1) {
@@ -497,12 +547,18 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
         
         double v0 = v00 * (1.0 - frac_x) + v10 * frac_x;
         double v1 = v01 * (1.0 - frac_x) + v11 * frac_x;
-        return v0 * (1.0 - frac_y) + v1 * frac_y;
+        double result = v0 * (1.0 - frac_y) + v1 * frac_y;
+        return std::max(0.0, std::min(1.0, result));
     }
     
     // Full trilinear interpolation
     double frac_x = (double)(x - x0) / (x1 - x0);
-    double frac_y = (double)(y - y0) / (y1 - y0);
+    
+    // Y-axis wraps: handle wrap-around interpolation
+    int dy = y1 - y0;
+    if (dy < 0) dy += dimensionSize;  // Wrapped case (e.g., y0=99, y1=3)
+    double frac_y = (dy > 0) ? (double)((y - y0 + dimensionSize) % dimensionSize) / dy : 0.0;
+    
     double frac_z = (double)(z - z0) / (z1 - z0);
     
     // Interpolate along x on bottom face (z=z0)
@@ -520,7 +576,11 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
     double c1 = c10 * (1.0 - frac_y) + c11 * frac_y;
     
     // Final interpolation along z
-    return c0 * (1.0 - frac_z) + c1 * frac_z;
+    double result = c0 * (1.0 - frac_z) + c1 * frac_z;
+    
+    // Safety clamp: probabilities must be in [0, 1]
+    // This prevents catastrophic squared errors from numerical issues
+    return std::max(0.0, std::min(1.0, result));
 }
 
 void BilinearModel::findSurroundingPoints3D(int x, int y, int z,
@@ -539,7 +599,7 @@ void BilinearModel::findSurroundingPoints3D(int x, int y, int z,
     // Binary search for surrounding coordinates - O(log m) each
     // where m = number of unique coordinates per dimension (~34 for step=3)
     
-    // Find x0, x1
+    // Find x0, x1 (X-axis does NOT wrap)
     auto it_x = std::lower_bound(known_x.begin(), known_x.end(), x);
     if (it_x != known_x.end() && *it_x == x) {
         x0 = x1 = x;
@@ -548,7 +608,7 @@ void BilinearModel::findSurroundingPoints3D(int x, int y, int z,
         x0 = (it_x != known_x.begin()) ? *(--it_x) : -1;
     }
     
-    // Find y0, y1
+    // Find y0, y1 (Y-AXIS WRAPS: y=0 connects to y=dimensionSize-1)
     auto it_y = std::lower_bound(known_y.begin(), known_y.end(), y);
     if (it_y != known_y.end() && *it_y == y) {
         y0 = y1 = y;
@@ -557,7 +617,17 @@ void BilinearModel::findSurroundingPoints3D(int x, int y, int z,
         y0 = (it_y != known_y.begin()) ? *(--it_y) : -1;
     }
     
-    // Find z0, z1
+    // Handle Y wrapping: if we're at the edge, wrap around
+    if (y0 == -1 && !known_y.empty()) {
+        // Below the minimum: wrap to top
+        y0 = known_y.back();
+    }
+    if (y1 == -1 && !known_y.empty()) {
+        // Above the maximum: wrap to bottom
+        y1 = known_y.front();
+    }
+    
+    // Find z0, z1 (Z-axis does NOT wrap)
     auto it_z = std::lower_bound(known_z.begin(), known_z.end(), z);
     if (it_z != known_z.end() && *it_z == z) {
         z0 = z1 = z;
@@ -566,13 +636,15 @@ void BilinearModel::findSurroundingPoints3D(int x, int y, int z,
         z0 = (it_z != known_z.begin()) ? *(--it_z) : -1;
     }
     
-    // Handle edges: if we're outside the sampled region, clamp to boundary
+    // Handle edges for NON-wrapping axes: clamp to boundary
     if (x0 == -1) x0 = x1;
     if (x1 == -1) x1 = x0;
-    if (y0 == -1) y0 = y1;
-    if (y1 == -1) y1 = y0;
     if (z0 == -1) z0 = z1;
     if (z1 == -1) z1 = z0;
+    
+    // For Y-axis: if still -1, fallback
+    if (y0 == -1) y0 = y1;
+    if (y1 == -1) y1 = y0;
 }
 
 int BilinearModel::getAdaptiveK(const std::vector<int>& query) const {
