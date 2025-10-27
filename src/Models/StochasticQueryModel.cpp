@@ -153,8 +153,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, cQ);
         }
 
-        int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
-        maper = new IDW(data, neigh, 1, 0.1);
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 9.0);
+        maper = new IDW(data, neigh, 2, 0.1);
     }
 }
 
