@@ -10,6 +10,7 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     
     shouldQuery = 25;
     scaleRatio = std::min(1.0, pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions));
+    if (scaleRatio == 1) shouldQuery = totalQueries/(pow(dimensionSize, dimensions));
     invScale = 4.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
     shouldQuery = 1*shouldQuery;
