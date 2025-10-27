@@ -8,7 +8,7 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 50;
+    shouldQuery = 67;
     scaleRatio = std::min(1.0, pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions));
     if (scaleRatio == 1) shouldQuery = totalQueries/(pow(dimensionSize, dimensions));
     invScale = 1.5/scaleRatio;
@@ -115,7 +115,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
     if (result >= 0.9) wCount++;
     tCount++;
 
-    if (tCount >= shouldQuery || currentQuery == totalQueries || 
+    if (tCount >= shouldQuery || (currentQuery == totalQueries && tCount >= 0.75 * shouldQuery) || 
        ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
         
         // compute raw probability
