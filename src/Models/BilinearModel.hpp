@@ -60,6 +60,10 @@ private:
     std::vector<std::pair<double, std::vector<int>>> treeData;  // Data for rebuilding tree
     std::unordered_map<int, double> confidenceCache;  // Cache confidence scores by index
     
+    // Precomputed coordinate sets for fast trilinear interpolation
+    std::vector<int> known_x, known_y, known_z;  // Sorted coordinate lists
+    bool coordsCached = false;
+    
     // Query generation
     int currentQueryPoint = 0;
     int repeatQueries = 0;
@@ -83,7 +87,14 @@ private:
     void findSurroundingPoints2D(int r, int c, int& r_left, int& r_right, 
                                   int& c_left, int& c_right) const;
     
-    // N-D interpolation using KD-tree (much faster!)
+    // 3D trilinear interpolation
+    double interpolate3D(int x, int y, int z) const;
+    void findSurroundingPoints3D(int x, int y, int z,
+                                  int& x0, int& x1,
+                                  int& y0, int& y1,
+                                  int& z0, int& z1) const;
+    
+    // N-D interpolation using KD-tree (for dimensions > 3)
     double interpolateND(const std::vector<int>& query) const;
 };
 

@@ -39,18 +39,29 @@ void BilinearModel::generateGridPoints() {
         gridPoints.push_back({dimensionSize-1, 0});
         gridPoints.push_back({dimensionSize-1, dimensionSize-1});
     } else {
-        // 3D space: maximize grid coverage with available budget
-        // Strategy: For discontinuous/unknown data, prioritize spatial coverage
-        // With 300k queries and 100^3 space, we need balance between:
-        // - Enough samples per point for reliable stochastic estimates (15-20 minimum)
-        // - Enough spatial coverage to capture discontinuities
+        // 3D space: adapt sampling strategy based on expected function characteristics
+        // Key insight from visualizations: smooth continuous functions with large regions
+        // 
+        // For SMOOTH functions (large connected regions, curved boundaries):
+        // - Prioritize SPATIAL COVERAGE over samples per point
+        // - Interpolation works well when function is continuous
+        // - Better to sample more locations with fewer samples each
+        //
+        // Step 2: 50×50×50 = 125k points × 2 samples
+        //   + Excellent coverage (12.5%), max dist 3.5 units
+        //   - Only 2 samples: high variance per point (SE=0.35)
+        //   - But interpolation smooths this out!
+        //
+        // Step 3: 34×34×34 = 39k points × 7 samples  
+        //   + Good coverage (3.9%), reasonable variance (SE=0.19)
+        //   + Best balance for smooth functions
+        //
+        // Step 4: 25×25×25 = 15.6k points × 19 samples
+        //   + Low variance per point (SE=0.11)
+        //   - Poor coverage (1.6%), misses structure
         
-        // Step 3: 34^3 ≈ 39k points × 7 samples - too few samples, high variance
-        // Step 4: 25^3 = 15.6k points × 19 samples - good coverage, decent samples
-        // Step 5: 20^3 = 8k points × 37 samples - less coverage, better samples
-        
-        // For potentially discontinuous data, use smaller step for better coverage
-        int step = 4;  // 15,625 points × 19 samples = better spatial resolution
+        // For smooth continuous data: prioritize coverage!
+        int step = 3;  // 39,304 points × 7 samples - excellent for smooth functions
         
         // Generate regular 3D grid
         std::vector<int> point(dimensions);
@@ -177,12 +188,26 @@ void BilinearModel::rebuildKDTree() {
     treeData.reserve(sampledPoints.size());
     confidenceCache.clear();
     
+    // Precompute coordinate sets for fast trilinear interpolation
+    std::set<int> x_set, y_set, z_set;
+    
     for (const auto& kv : sampledPoints) {
         if (kv.second.count > 0) {
             treeData.push_back({kv.second.average(), kv.second.coords});
             confidenceCache[kv.first] = kv.second.confidence();  // Cache confidence by index
+            
+            // Build coordinate sets
+            if (dimensions >= 1) x_set.insert(kv.second.coords[0]);
+            if (dimensions >= 2) y_set.insert(kv.second.coords[1]);
+            if (dimensions >= 3) z_set.insert(kv.second.coords[2]);
         }
     }
+    
+    // Convert sets to sorted vectors for O(log m) binary search
+    known_x.assign(x_set.begin(), x_set.end());
+    known_y.assign(y_set.begin(), y_set.end());
+    known_z.assign(z_set.begin(), z_set.end());
+    coordsCached = true;
     
     // Build KD-tree
     if (!treeData.empty()) {
@@ -192,27 +217,47 @@ void BilinearModel::rebuildKDTree() {
 
 void BilinearModel::findSurroundingPoints2D(int r, int c, int& r_left, int& r_right, 
                                              int& c_left, int& c_right) const {
-    // Find known rows and columns
-    std::set<int> known_rows, known_cols;
-    for (const auto& kv : sampledPoints) {
-        if (kv.second.count > 0) {
-            known_rows.insert(kv.second.coords[0]);
-            known_cols.insert(kv.second.coords[1]);
+    // Use precomputed coordinate lists for O(log m) binary search (same as 3D)
+    if (coordsCached && !known_x.empty() && !known_y.empty()) {
+        // Binary search on precomputed sorted lists
+        auto it_r = std::lower_bound(known_x.begin(), known_x.end(), r);
+        if (it_r != known_x.end() && *it_r == r) {
+            r_left = r_right = r;
+        } else {
+            r_right = (it_r != known_x.end()) ? *it_r : -1;
+            r_left = (it_r != known_x.begin()) ? *(--it_r) : -1;
         }
-    }
-    
-    // Find surrounding coordinates
-    r_left = r_right = -1;
-    c_left = c_right = -1;
-    
-    for (int kr : known_rows) {
-        if (kr <= r && (r_left == -1 || kr > r_left)) r_left = kr;
-        if (kr >= r && (r_right == -1 || kr < r_right)) r_right = kr;
-    }
-    
-    for (int kc : known_cols) {
-        if (kc <= c && (c_left == -1 || kc > c_left)) c_left = kc;
-        if (kc >= c && (c_right == -1 || kc < c_right)) c_right = kc;
+        
+        auto it_c = std::lower_bound(known_y.begin(), known_y.end(), c);
+        if (it_c != known_y.end() && *it_c == c) {
+            c_left = c_right = c;
+        } else {
+            c_right = (it_c != known_y.end()) ? *it_c : -1;
+            c_left = (it_c != known_y.begin()) ? *(--it_c) : -1;
+        }
+    } else {
+        // Fallback: build coordinate sets (only if not cached)
+        std::set<int> known_rows, known_cols;
+        for (const auto& kv : sampledPoints) {
+            if (kv.second.count > 0) {
+                known_rows.insert(kv.second.coords[0]);
+                known_cols.insert(kv.second.coords[1]);
+            }
+        }
+        
+        // Find surrounding coordinates
+        r_left = r_right = -1;
+        c_left = c_right = -1;
+        
+        for (int kr : known_rows) {
+            if (kr <= r && (r_left == -1 || kr > r_left)) r_left = kr;
+            if (kr >= r && (r_right == -1 || kr < r_right)) r_right = kr;
+        }
+        
+        for (int kc : known_cols) {
+            if (kc <= c && (c_left == -1 || kc > c_left)) c_left = kc;
+            if (kc >= c && (c_right == -1 || kc < c_right)) c_right = kc;
+        }
     }
     
     // Handle edges
@@ -279,77 +324,41 @@ double BilinearModel::interpolate2D(int r, int c) const {
 }
 
 double BilinearModel::interpolateND(const std::vector<int>& query) const {
-    // Use KD-tree for efficient nearest neighbor lookup
-    if (!knnTree) {
-        return 0.3;  // Conservative default based on typical distributions
+    if (dimensions == 3) {
+        return interpolate3D(query[0], query[1], query[2]);
     }
     
-    // Use adaptive k based on local density
-    const int k = getAdaptiveK(query);
+    // Fallback to KNN for higher dimensions (shouldn't happen in practice)
+    if (!knnTree) {
+        return 0.3;
+    }
+    
+    const int k = 27;  // 3^3 cube
     std::vector<KNNTree::KDResult> neighbors = knnTree->getKNearest(query, k);
     
     if (neighbors.empty()) {
-        return 0.3;  // Conservative default
+        return 0.3;
     }
     
-    // Confidence-weighted IDW interpolation
+    // Check for exact match
+    for (const auto& neighbor : neighbors) {
+        if (neighbor.distance < 1e-6) {
+            return neighbor.value;
+        }
+    }
+    
+    // Gentle IDW interpolation
     double sum_weights = 0.0;
     double sum_values = 0.0;
-    double max_dist = 0.0;
     
     for (const auto& neighbor : neighbors) {
         double dist = neighbor.distance;
-        double value = neighbor.value;
-        
-        // Exact match
-        if (dist < 1e-6) {
-            return value;
-        }
-        
-        max_dist = std::max(max_dist, dist);
+        double dist_weight = 1.0 / (1.0 + dist / 5.0);
+        sum_weights += dist_weight;
+        sum_values += dist_weight * neighbor.value;
     }
     
-    // If we're far from all samples, regress toward the global mean
-    // to avoid over-confident extrapolation
-    double global_mean = 0.3;  // Conservative estimate
-    if (!neighbors.empty() && max_dist > 10.0) {
-        // Calculate sample mean from neighbors
-        double sample_mean = 0.0;
-        for (const auto& neighbor : neighbors) {
-            sample_mean += neighbor.value;
-        }
-        sample_mean /= neighbors.size();
-        
-        // Blend between sample mean and global mean based on distance
-        double blend_factor = std::min(1.0, max_dist / 20.0);  // 0 at dist=0, 1 at dist=20+
-        return sample_mean * (1.0 - blend_factor) + global_mean * blend_factor;
-    }
-    
-    for (const auto& neighbor : neighbors) {
-        double dist = neighbor.distance;
-        double value = neighbor.value;
-        
-        // Get cached confidence score for this neighbor
-        int idx = coordsToIndex(neighbor.point);
-        double confidence = 1.0;  // Default confidence
-        
-        auto conf_it = confidenceCache.find(idx);
-        if (conf_it != confidenceCache.end()) {
-            confidence = conf_it->second;
-        }
-        
-        // Inverse distance weighting (not squared - less aggressive)
-        // This provides smoother interpolation and reduces overfitting to nearest point
-        // Normalize confidence to range [0.7, 1.0] to avoid over-weighting
-        double normalized_confidence = 0.7 + 0.3 * (confidence / std::max(1.0, confidence));
-        double dist_weight = 1.0 / (dist + 1.0);  // Add 1 to avoid division issues
-        double total_weight = dist_weight * normalized_confidence;
-        
-        sum_weights += total_weight;
-        sum_values += total_weight * value;
-    }
-    
-    return sum_weights > 0 ? sum_values / sum_weights : 0.3;  // Conservative default
+    return sum_weights > 0 ? sum_values / sum_weights : 0.3;
 }
 
 double BilinearModel::getNearestValue(const std::vector<int>& query) const {
@@ -357,6 +366,15 @@ double BilinearModel::getNearestValue(const std::vector<int>& query) const {
         return 0.3;
     }
     
+    // Use KD-tree for O(log n) nearest neighbor lookup instead of O(n) linear search
+    if (knnTree && !treeData.empty()) {
+        auto neighbors = knnTree->getKNearest(query, 1);
+        if (!neighbors.empty()) {
+            return neighbors[0].value;
+        }
+    }
+    
+    // Fallback to linear search if KD-tree not available (rare)
     double minDist = std::numeric_limits<double>::infinity();
     double nearestValue = 0.3;
     
@@ -378,22 +396,205 @@ double BilinearModel::getNearestValue(const std::vector<int>& query) const {
     return nearestValue;
 }
 
-int BilinearModel::getAdaptiveK(const std::vector<int>& query) const {
-    if (!knnTree || treeData.empty()) {
-        return 8;  // Default k
+double BilinearModel::interpolate3D(int x, int y, int z) const {
+    if (sampledPoints.empty()) {
+        return 0.3;  // Default fallback
     }
     
-    // For regular grid sampling with step=4, we want k=27 (3x3x3 neighborhood)
-    // This captures the local cube around the query point
-    // Using fewer neighbors leads to nearest-neighbor behavior (not interpolation)
-    // Using many more neighbors over-smooths and loses local structure
+    // Find the 8 surrounding grid points for trilinear interpolation
+    int x0, x1, y0, y1, z0, z1;
+    findSurroundingPoints3D(x, y, z, x0, x1, y0, y1, z0, z1);
     
-    // For 3D with regular grid:
-    // - 8 neighbors = corners of cube (trilinear interpolation)
-    // - 27 neighbors = 3x3x3 cube (better for irregular or missing data)
-    // - 64 neighbors = 4x4x4 cube (smooths too much)
+    // If we don't have surrounding points, fall back to nearest neighbor
+    if (x0 == -1 || y0 == -1 || z0 == -1) {
+        return getNearestValue({x, y, z});
+    }
     
-    int k = (dimensions == 2) ? 9 : 27;  // 3x3 for 2D, 3x3x3 for 3D
+    // Get the 8 corner values of the cube
+    std::vector<double> corner_values(8);
+    std::vector<std::vector<int>> corners = {
+        {x0, y0, z0}, {x1, y0, z0},  // bottom face
+        {x0, y1, z0}, {x1, y1, z0},
+        {x0, y0, z1}, {x1, y0, z1},  // top face
+        {x0, y1, z1}, {x1, y1, z1}
+    };
+    
+    for (size_t i = 0; i < corners.size(); ++i) {
+        int idx = coordsToIndex(corners[i]);
+        auto it = sampledPoints.find(idx);
+        if (it != sampledPoints.end() && it->second.count > 0) {
+            corner_values[i] = it->second.average();
+        } else {
+            // If corner is missing, use nearest value
+            // This handles edge cases where grid is sparse
+            corner_values[i] = getNearestValue(corners[i]);
+        }
+    }
+    
+    // Handle degenerate cases (point lies on face, edge, or corner)
+    if (x0 == x1 && y0 == y1 && z0 == z1) {
+        // Point is exactly on a grid point
+        return corner_values[0];
+    }
+    
+    if (x0 == x1) {
+        // Degenerate in x - do bilinear in yz plane
+        if (y0 == y1 && z0 == z1) return corner_values[0];
+        if (y0 == y1) {
+            // Linear in z only
+            double frac_z = (double)(z - z0) / (z1 - z0);
+            return corner_values[0] * (1.0 - frac_z) + corner_values[4] * frac_z;
+        }
+        if (z0 == z1) {
+            // Linear in y only
+            double frac_y = (double)(y - y0) / (y1 - y0);
+            return corner_values[0] * (1.0 - frac_y) + corner_values[2] * frac_y;
+        }
+        // Bilinear in yz
+        double frac_y = (double)(y - y0) / (y1 - y0);
+        double frac_z = (double)(z - z0) / (z1 - z0);
+        
+        double v00 = corner_values[0];
+        double v01 = corner_values[4];
+        double v10 = corner_values[2];
+        double v11 = corner_values[6];
+        
+        double v0 = v00 * (1.0 - frac_z) + v01 * frac_z;
+        double v1 = v10 * (1.0 - frac_z) + v11 * frac_z;
+        return v0 * (1.0 - frac_y) + v1 * frac_y;
+    }
+    
+    if (y0 == y1) {
+        // Degenerate in y - do bilinear in xz plane
+        if (z0 == z1) {
+            // Linear in x only
+            double frac_x = (double)(x - x0) / (x1 - x0);
+            return corner_values[0] * (1.0 - frac_x) + corner_values[1] * frac_x;
+        }
+        // Bilinear in xz
+        double frac_x = (double)(x - x0) / (x1 - x0);
+        double frac_z = (double)(z - z0) / (z1 - z0);
+        
+        double v00 = corner_values[0];
+        double v01 = corner_values[4];
+        double v10 = corner_values[1];
+        double v11 = corner_values[5];
+        
+        double v0 = v00 * (1.0 - frac_z) + v01 * frac_z;
+        double v1 = v10 * (1.0 - frac_z) + v11 * frac_z;
+        return v0 * (1.0 - frac_x) + v1 * frac_x;
+    }
+    
+    if (z0 == z1) {
+        // Degenerate in z - do bilinear in xy plane (standard bilinear)
+        double frac_x = (double)(x - x0) / (x1 - x0);
+        double frac_y = (double)(y - y0) / (y1 - y0);
+        
+        double v00 = corner_values[0];
+        double v10 = corner_values[1];
+        double v01 = corner_values[2];
+        double v11 = corner_values[3];
+        
+        double v0 = v00 * (1.0 - frac_x) + v10 * frac_x;
+        double v1 = v01 * (1.0 - frac_x) + v11 * frac_x;
+        return v0 * (1.0 - frac_y) + v1 * frac_y;
+    }
+    
+    // Full trilinear interpolation
+    double frac_x = (double)(x - x0) / (x1 - x0);
+    double frac_y = (double)(y - y0) / (y1 - y0);
+    double frac_z = (double)(z - z0) / (z1 - z0);
+    
+    // Interpolate along x on bottom face (z=z0)
+    double c00 = corner_values[0] * (1.0 - frac_x) + corner_values[1] * frac_x;
+    double c01 = corner_values[2] * (1.0 - frac_x) + corner_values[3] * frac_x;
+    
+    // Interpolate along x on top face (z=z1)
+    double c10 = corner_values[4] * (1.0 - frac_x) + corner_values[5] * frac_x;
+    double c11 = corner_values[6] * (1.0 - frac_x) + corner_values[7] * frac_x;
+    
+    // Interpolate along y on bottom face
+    double c0 = c00 * (1.0 - frac_y) + c01 * frac_y;
+    
+    // Interpolate along y on top face
+    double c1 = c10 * (1.0 - frac_y) + c11 * frac_y;
+    
+    // Final interpolation along z
+    return c0 * (1.0 - frac_z) + c1 * frac_z;
+}
+
+void BilinearModel::findSurroundingPoints3D(int x, int y, int z,
+                                             int& x0, int& x1,
+                                             int& y0, int& y1,
+                                             int& z0, int& z1) const {
+    // Use precomputed sorted coordinate lists for O(log m) binary search
+    // This is MUCH faster than O(n) iteration through all sampled points
+    
+    if (!coordsCached || known_x.empty()) {
+        // Fallback if coords not cached (shouldn't happen after rebuildKDTree)
+        x0 = x1 = y0 = y1 = z0 = z1 = -1;
+        return;
+    }
+    
+    // Binary search for surrounding coordinates - O(log m) each
+    // where m = number of unique coordinates per dimension (~34 for step=3)
+    
+    // Find x0, x1
+    auto it_x = std::lower_bound(known_x.begin(), known_x.end(), x);
+    if (it_x != known_x.end() && *it_x == x) {
+        x0 = x1 = x;
+    } else {
+        x1 = (it_x != known_x.end()) ? *it_x : -1;
+        x0 = (it_x != known_x.begin()) ? *(--it_x) : -1;
+    }
+    
+    // Find y0, y1
+    auto it_y = std::lower_bound(known_y.begin(), known_y.end(), y);
+    if (it_y != known_y.end() && *it_y == y) {
+        y0 = y1 = y;
+    } else {
+        y1 = (it_y != known_y.end()) ? *it_y : -1;
+        y0 = (it_y != known_y.begin()) ? *(--it_y) : -1;
+    }
+    
+    // Find z0, z1
+    auto it_z = std::lower_bound(known_z.begin(), known_z.end(), z);
+    if (it_z != known_z.end() && *it_z == z) {
+        z0 = z1 = z;
+    } else {
+        z1 = (it_z != known_z.end()) ? *it_z : -1;
+        z0 = (it_z != known_z.begin()) ? *(--it_z) : -1;
+    }
+    
+    // Handle edges: if we're outside the sampled region, clamp to boundary
+    if (x0 == -1) x0 = x1;
+    if (x1 == -1) x1 = x0;
+    if (y0 == -1) y0 = y1;
+    if (y1 == -1) y1 = y0;
+    if (z0 == -1) z0 = z1;
+    if (z1 == -1) z1 = z0;
+}
+
+int BilinearModel::getAdaptiveK(const std::vector<int>& query) const {
+    if (!knnTree || treeData.empty()) {
+        return 27;  // Default k
+    }
+    
+    // For smooth continuous functions with step=3 sampling:
+    // - We have good spatial coverage (3.9%)
+    // - But only 7 samples per point means higher variance
+    // - Solution: use MORE neighbors to smooth out variance
+    //
+    // With step=3, neighbors are ~3-5 units apart
+    // A 5×5×5 cube (k=125) covers radius ~7.5 units
+    // This provides excellent smoothing for continuous functions
+    //
+    // For smooth functions, more neighbors = better (averages out noise)
+    // For discontinuous functions, fewer neighbors = better (preserves edges)
+    //
+    // Since visualizations show smooth functions with large regions:
+    
+    int k = (dimensions == 2) ? 25 : 64;  // 5×5 for 2D, 4×4×4 for 3D
     
     // Ensure k doesn't exceed available data
     return std::min(k, (int)treeData.size());
