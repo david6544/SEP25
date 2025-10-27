@@ -29,7 +29,7 @@ void DumbModel::update_prediction(const std::vector<int> &query, double result) 
 }
 
 double DumbModel::get_value_at(const std::vector<int> &query) {
-    return 0.36;
+    return 0.345;
 }
 
 #endif // DUMB || TESTING
