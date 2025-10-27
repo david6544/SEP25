@@ -31,12 +31,12 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     precomputedBounds[scaledSize-1].second = dimensionSize-1;
 }
 
-// std::ofstream file("output.txt", std::ios::app);
+std::ofstream file("output.txt", std::ios::app);
 
 StochasticQueryModel::~StochasticQueryModel(){
     if (this->maper) delete this->maper;
     if (this->qt) delete this->qt;
-    // file.close();
+    file.close();
 }
 
 std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& rawQuery) const {
@@ -162,6 +162,6 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
     if (!maper) return priorProb; // fallback
     double val = maper->predict(query);
-    // file << val << " ";
+    file << val << " ";
     return val;
 }
