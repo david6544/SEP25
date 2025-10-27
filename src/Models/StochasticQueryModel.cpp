@@ -8,7 +8,7 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 20;
+    shouldQuery = 50;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 2.0/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
@@ -55,6 +55,7 @@ std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& r
 }
 
 std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const std::vector<int>& scaledQuery) const{
+    return unscale_midpoint(scaledQuery);
     std::vector<int> result(scaledQuery.size());
     static thread_local std::mt19937_64 rng(std::random_device{}());
 
@@ -147,23 +148,15 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, cQ);
         }
 
-        int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 10.0);
         maper = new IDW(data, neigh, 1, 0.1);
     }
 }
 
 // Modified get_value_at to fallback to prior if IDW is not ready
+std::ofstream file("output.txt", std::ios::app);
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
     if (!maper) return priorProb; // fallback
     double val = maper->predict(query);
-    // clamp predictions
-    std::ofstream file("output.txt", std::ios::app);
-    if (!file) {
-        std::cerr << "Error: could not open or create file!" << std::endl;
-        return 1;
-    }
-
-    file << val << " "; // Append the double as text
-    file.close();
     return val;
 }
