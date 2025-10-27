@@ -163,7 +163,7 @@ double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
         return 1;
     }
 
-    file << val << "\n"; // Append the double as text
+    file << val << " "; // Append the double as text
     file.close();
     return val;
 }
