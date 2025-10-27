@@ -65,9 +65,15 @@ void BilinearModel::generateGridPoints() {
         // 1. Better per-point accuracy (more samples) to reduce variance
         // 2. Still maintain reasonable coverage for interpolation
         // 
-        // Step 3: 39k points × 7 samples (SE=0.19) - high outlier risk
-        // Step 4: 15.6k points × 19 samples (SE=0.11) - better accuracy, still reasonable coverage
-        int step = 4;  // 15,625 points × 19 samples - better for squared error metric
+        // RESULTS ANALYSIS:
+        // - Step 4 (15.6k points × 19 samples): Score = 1.82B (WORSE than 0.35 constant = 1.08B)
+        //   Problem: Too sparse, interpolation creates errors larger than just using global mean
+        // 
+        // - Hypothesis: Function has discontinuities (Peter: "complex state spaces are combinations")
+        //   Need better spatial coverage to capture discontinuities
+        // 
+        // Step 3: 39k points × 7 samples - better coverage for complex/discontinuous functions
+        int step = 3;  // Back to step=3 for better coverage of discontinuities
         
         // Generate regular 3D grid
         std::vector<int> point(dimensions);
@@ -456,7 +462,7 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
         }
     }
     
-    // If any corners are missing, blend with local average to reduce outlier risk
+    // If any corners are missing, use conservative strategy
     if (!all_corners_sampled) {
         // Calculate confidence-weighted average of available corners
         double sum_weighted = 0.0;
@@ -465,14 +471,43 @@ double BilinearModel::interpolate3D(int x, int y, int z) const {
             sum_weighted += corner_values[i] * corner_confidence[i];
             sum_confidence += corner_confidence[i];
         }
-        double local_avg = sum_confidence > 0 ? sum_weighted / sum_confidence : 0.3;
+        double local_avg = sum_confidence > 0 ? sum_weighted / sum_confidence : 0.35;
         
-        // Blend missing corners toward local average (reduces extreme outliers)
+        // Count how many corners are actually sampled
+        int sampled_count = 0;
+        for (size_t i = 0; i < 8; ++i) {
+            if (corner_confidence[i] >= 1.0) sampled_count++;
+        }
+        
+        // If too few corners sampled (< 4), fall back to local average
+        // This prevents interpolation in regions with insufficient data
+        if (sampled_count < 4) {
+            return std::max(0.0, std::min(1.0, local_avg));
+        }
+        
+        // Blend missing corners heavily toward local average (reduces extreme outliers)
         for (size_t i = 0; i < 8; ++i) {
             if (corner_confidence[i] < 1.0) {  // Missing or low-confidence corner
-                // Blend 70% nearest value, 30% local average
-                corner_values[i] = 0.7 * corner_values[i] + 0.3 * local_avg;
+                // Blend 50% nearest value, 50% local average (more conservative)
+                corner_values[i] = 0.5 * corner_values[i] + 0.5 * local_avg;
             }
+        }
+    } else {
+        // All corners sampled - check for discontinuity
+        // If corner values vary too much, the function may be discontinuous
+        // In that case, local average is safer than interpolation
+        double min_val = *std::min_element(corner_values.begin(), corner_values.end());
+        double max_val = *std::max_element(corner_values.begin(), corner_values.end());
+        double range = max_val - min_val;
+        
+        // If range > 0.4 (e.g., corners vary from 0.2 to 0.7), suspect discontinuity
+        // Use weighted average instead of interpolation
+        if (range > 0.4) {
+            double avg = 0.0;
+            for (double val : corner_values) {
+                avg += val;
+            }
+            return std::max(0.0, std::min(1.0, avg / 8.0));
         }
     }
     

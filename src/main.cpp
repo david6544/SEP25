@@ -21,6 +21,9 @@
 #elif defined(BILINEAR)
     #include "Models/BilinearModel.hpp"
     #define CurrentModel BilinearModel
+#elif defined(REGION)
+    #include "../src/Models/RegionModel.hpp"
+    #define CurrentModel RegionModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
