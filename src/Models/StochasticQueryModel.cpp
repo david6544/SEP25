@@ -109,14 +109,13 @@ std::vector<int> StochasticQueryModel::get_next_query() {
 
 // Add a prior probability member to your class
 double priorProb = 0.4; // initial guess for unknown points
-double shrinkFactor = 0.5; // how strongly we shrink toward the prior
+double shrinkFactor = 1; // how strongly we shrink toward the prior
 
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     if (result >= 0.9) wCount++;
     tCount++;
 
-    if (tCount >= shouldQuery || (currentQuery == totalQueries && tCount >= 0.75 * shouldQuery) || 
-       ((tCount > 0.75 * shouldQuery) && (wCount >= 0.9 * tCount || wCount <= 0.1 * tCount))) {
+    if (tCount >= shouldQuery || (currentQuery == totalQueries && tCount >= 0.75 * shouldQuery)) {
         
         // compute raw probability
         double rawProb = double(wCount) / tCount;
@@ -141,7 +140,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
 
             // clamp predictions to avoid extremes
-            prob = std::clamp(prob, 0.05, 0.95);
+            // prob = std::clamp(prob, 0.05, 0.95);
 
             std::vector<int> cQ = unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize));
             data.emplace_back(prob, cQ);
@@ -153,7 +152,7 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, cQ);
         }
 
-        int neigh = std::clamp(0.01 * data.size(), 2.0, 9.0);
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
         maper = new IDW(data, neigh, 1, 0.1);
     }
 }
