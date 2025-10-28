@@ -6,8 +6,8 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    priorProb = 0.35; // initial guess for unknown points
-    shrinkFactor = 0.8; // how strongly we shrink toward the prior
+    priorProb = 0.351; // initial guess for unknown points
+    shrinkFactor = 0.95; // how strongly we shrink toward the prior
     shouldQuery = 80;
     scaleRatio = pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions);
     invScale = 1.0/scaleRatio;
