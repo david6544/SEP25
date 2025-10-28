@@ -5,12 +5,12 @@
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 370;
+    shouldQuery = 175;
     scaleRatio = std::min(1.0, pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions));
     if (scaleRatio == 1) shouldQuery = totalQueries/(pow(dimensionSize, dimensions));
     invScale = 1/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
-    shouldQuery = 1*shouldQuery;
+    shouldQuery = 2*shouldQuery;
     qt = new QueryTree(dimensions, scaledSize, 30);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
