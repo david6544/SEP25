@@ -1,20 +1,17 @@
 #include "StochasticQueryModel.hpp"
 #include "../InputOutput/InputOutput.hpp"
 
-#include <fstream>
-
-
 
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    shouldQuery = 100;
+    shouldQuery = 300;
     scaleRatio = std::min(1.0, pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions));
     if (scaleRatio == 1) shouldQuery = totalQueries/(pow(dimensionSize, dimensions));
     invScale = 1.5/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
     shouldQuery = 1*shouldQuery;
-    qt = new QueryTree(dimensions, scaledSize, 10);
+    qt = new QueryTree(dimensions, scaledSize, 30);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
     
@@ -31,12 +28,9 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     precomputedBounds[scaledSize-1].second = dimensionSize-1;
 }
 
-// std::ofstream file("output.txt", std::ios::app);
-
 StochasticQueryModel::~StochasticQueryModel(){
     if (this->maper) delete this->maper;
     if (this->qt) delete this->qt;
-    // file.close();
 }
 
 std::vector<int> StochasticQueryModel::lowerResolution(const std::vector<int>& rawQuery) const {
@@ -64,9 +58,11 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
         int s = scaledQuery[i];
-        int r1 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/2;
-        int r2 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/2;
-        result[i] = r1 + r2;
+        int r1 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        int r2 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        int r3 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        int r4 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        result[i] = r1 + r2 + r3 + r4;
     }
     return result;
 }
@@ -152,8 +148,8 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
             data.emplace_back(prob, cQ);
         }
 
-        int neigh = std::clamp(0.01 * data.size(), 2.0, 4.0);
-        maper = new IDW(data, neigh, 1, 0.1);
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 8.0);
+        maper = new IDW(data, neigh, 2, 0.1);
     }
 }
 
@@ -161,6 +157,5 @@ void StochasticQueryModel::update_prediction(const std::vector<int>& query, doub
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
     if (!maper) return priorProb; // fallback
     double val = maper->predict(query);
-    // file << val << " ";
     return val;
 }
