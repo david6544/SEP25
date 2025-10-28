@@ -5,7 +5,14 @@
 #include <set>
 
 RegionModel::RegionModel(int dimensions, int dimensionSize, int totalQueries)
-    : Model(dimensions, dimensionSize, totalQueries) {
+    : Model(dimensions, dimensionSize, totalQueries), config() {
+    
+    // Start with initial grid sampling
+    generateInitialGrid();
+}
+
+RegionModel::RegionModel(int dimensions, int dimensionSize, int totalQueries, const RegionModelConfig& cfg)
+    : Model(dimensions, dimensionSize, totalQueries), config(cfg) {
     
     // Start with initial grid sampling
     generateInitialGrid();
@@ -41,38 +48,38 @@ int RegionModel::getAdaptiveSamples(const std::vector<int>& point) {
     int idx = coordsToIndex(point);
     auto it = sampledPoints.find(idx);
     
-    // Initial grid: 5-7 samples (enough to detect discontinuity)
+    // Initial grid: configurable samples (enough to detect discontinuity)
     if (current_phase == Phase::INITIAL_GRID) {
-        return 5;
+        return config.samples_initial_grid;
     }
     
-    // Boundary walking: 8-10 samples (high confidence needed)
+    // Boundary walking: configurable samples (high confidence needed)
     if (current_phase == Phase::BOUNDARY_WALKING) {
-        return 8;
+        return config.samples_boundary_walking;
     }
     
     // Region filling: adaptive based on variance
     if (current_phase == Phase::REGION_FILLING) {
         if (it != sampledPoints.end() && it->second.count > 0) {
             double var = it->second.variance();
-            if (var > 0.2) return 10;  // High variance = uncertain
-            if (var > 0.1) return 7;   // Medium variance
-            return 5;                   // Low variance = smooth region
+            if (var > config.variance_threshold_high) return config.samples_region_high_var;
+            if (var > config.variance_threshold_medium) return config.samples_region_med_var;
+            return config.samples_region_low_var;
         }
-        return 5;  // Default for new points
+        return config.samples_region_low_var;  // Default for new points
     }
     
-    // Pattern matching: fewer samples (12-15 for uncertain areas)
+    // Pattern matching: fewer samples for known patterns
     if (current_phase == Phase::PATTERN_MATCHING) {
         if (it != sampledPoints.end() && it->second.count > 0) {
             double var = it->second.variance();
-            if (var > 0.2) return 12;  // Very uncertain
-            return 3;                   // Already have data
+            if (var > config.variance_threshold_high) return config.samples_pattern_high_var;
+            return config.samples_pattern_low_var;  // Already have data
         }
-        return 5;
+        return config.samples_region_low_var;
     }
     
-    return 5;  // Default fallback
+    return config.samples_region_low_var;  // Default fallback
 }
 
 // OPTIMIZATION 2: Distance calculation with Y-axis wrapping
@@ -91,9 +98,9 @@ double RegionModel::distance_with_wrapping(const std::vector<int>& a, const std:
 void RegionModel::generateInitialGrid() {
     // Phase 1: Coarse grid sampling to detect discontinuities
     // Use ~10-20% of budget for initial exploration
-    // Step size ~10-15 for good coverage with limited samples
+    // Step size configurable for different grid sizes
     
-    int step = 10;  // 10×10×10 = 1000 points × 3 samples = 3000 queries (~1% of budget)
+    int step = config.initial_grid_step;
     
     std::vector<int> point(dimensions);
     std::function<void(int)> generateRecursive = [&](int dim) {
@@ -192,11 +199,11 @@ void RegionModel::update_prediction(const std::vector<int>& query, double result
     // If in boundary walking phase, check neighbors for more boundaries
     if (current_phase == Phase::BOUNDARY_WALKING) {
         // OPTIMIZATION 3: Check after minimum samples (not full samplesPerPoint)
-        if (sp.count >= 3 && detectDiscontinuity(query)) {
+        if (sp.count >= config.min_samples_for_discontinuity && detectDiscontinuity(query)) {
             sp.is_boundary = true;
             
             // Add unvisited neighbors to queue
-            auto neighbors = getNeighbors(query, 2);
+            auto neighbors = getNeighbors(query, config.neighbor_search_radius);
             for (const auto& neighbor : neighbors) {
                 int nidx = coordsToIndex(neighbor);
                 if (visitedPoints.find(nidx) == visitedPoints.end()) {
@@ -212,13 +219,13 @@ bool RegionModel::detectDiscontinuity(const std::vector<int>& point) {
     // OPTIMIZATION 1: Faster discontinuity detection using variance + face neighbors only
     int idx = coordsToIndex(point);
     auto it = sampledPoints.find(idx);
-    if (it == sampledPoints.end() || it->second.count < 3) {
+    if (it == sampledPoints.end() || it->second.count < config.min_samples_for_discontinuity) {
         return false;  // Need minimum samples
     }
     
     // High variance indicates stochastic boundary or discontinuity
     double center_var = it->second.variance();
-    if (center_var > 0.15) {
+    if (center_var > config.variance_threshold_discontinuity) {
         return true;  // High variance = likely boundary
     }
     
@@ -255,11 +262,11 @@ bool RegionModel::detectDiscontinuity(const std::vector<int>& point) {
         
         int nidx = coordsToIndex(neighbor);
         auto nit = sampledPoints.find(nidx);
-        if (nit != sampledPoints.end() && nit->second.count >= 3) {
+        if (nit != sampledPoints.end() && nit->second.count >= config.min_samples_for_discontinuity) {
             double neighbor_value = nit->second.average();
             
             // Discontinuity if difference > threshold
-            if (std::abs(center_value - neighbor_value) > 0.3) {
+            if (std::abs(center_value - neighbor_value) > config.gradient_threshold) {
                 return true;
             }
         }
@@ -354,7 +361,10 @@ double RegionModel::get_value_at(const std::vector<int>& query) {
     // Check if we have exact data
     auto it = sampledPoints.find(idx);
     if (it != sampledPoints.end() && it->second.count > 0) {
-        return it->second.average();
+        double avg = it->second.average();
+        if (avg >= 0.0) {  // Valid data
+            return std::max(0.0, std::min(1.0, avg));
+        }
     }
     
     // Build KD-tree if needed
@@ -362,15 +372,26 @@ double RegionModel::get_value_at(const std::vector<int>& query) {
         rebuildKDTree();
     }
     
+    // If no sampled points yet, return neutral fallback
+    if (sampledPoints.empty() || !knnTree) {
+        return 0.5;  // Neutral probability when no data
+    }
+    
     // Strategy 1: Check if query is in a known region
     double prediction = predictFromRegion(query);
-    if (prediction >= 0.0) {
-        return std::max(0.0, std::min(1.0, prediction));
+    if (prediction >= 0.0 && prediction <= 1.0) {
+        return prediction;  // Already valid, no need to clamp again
     }
     
     // Strategy 2: Use nearest neighbor
     prediction = predictFromNearest(query);
-    return std::max(0.0, std::min(1.0, prediction));
+    
+    // Ensure valid probability range
+    if (prediction < 0.0 || prediction > 1.0) {
+        return 0.5;  // Fallback to neutral if invalid
+    }
+    
+    return prediction;
 }
 
 double RegionModel::predictFromRegion(const std::vector<int>& query) {
@@ -411,14 +432,14 @@ double RegionModel::predictFromRegion(const std::vector<int>& query) {
 
 double RegionModel::predictFromNearest(const std::vector<int>& query) {
     if (!knnTree || treeData.empty()) {
-        return 0.35;  // Global fallback
+        return 0.5;  // Neutral fallback when no tree
     }
     
     // Average K nearest neighbors with distance weighting
-    int k = 8;
+    int k = config.knn_k;
     auto neighbors = knnTree->getKNearest(query, k);
     
-    if (neighbors.empty()) return 0.35;
+    if (neighbors.empty()) return 0.5;  // Neutral fallback
     
     double sum_weighted = 0.0;
     double sum_weights = 0.0;
@@ -432,7 +453,12 @@ double RegionModel::predictFromNearest(const std::vector<int>& query) {
         sum_weights += weight;
     }
     
-    return sum_weights > 0 ? sum_weighted / sum_weights : 0.35;
+    if (sum_weights == 0.0) return 0.5;  // Safety check
+    
+    double result = sum_weighted / sum_weights;
+    
+    // Clamp to valid probability range
+    return std::max(0.0, std::min(1.0, result));
 }
 
 void RegionModel::rebuildKDTree() {

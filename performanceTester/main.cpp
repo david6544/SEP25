@@ -18,6 +18,7 @@
     #define CurrentModel BilinearModel
 #elif defined(REGION)
     #include "../src/Models/RegionModel.hpp"
+    #include "../src/Models/RegionModelPresets.hpp"
     #define CurrentModel RegionModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
@@ -45,7 +46,13 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
     StateSpaceIO::set_IO(fspace, name, queries, stochastic);
     StateSpaceIO* io = (StateSpaceIO*) InputOutput::get_instance();
 
+#if defined(REGION)
+    // Use Optimized100Cube preset for RegionModel
+    auto config = RegionModelPresets::Optimized100Cube();
+    CurrentModel model(dimensions, dimensionSize, queries, config);
+#else
     CurrentModel model(dimensions, dimensionSize, queries);
+#endif
     
     for (int i = 0; i < queries; i++) {
         std::vector<int> query = model.get_next_query();

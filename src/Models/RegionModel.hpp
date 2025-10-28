@@ -13,6 +13,39 @@
 #include <algorithm>
 
 /**
+ * Configuration parameters for RegionModel hyperparameters
+ */
+struct RegionModelConfig {
+    // Initial grid sampling
+    int initial_grid_step = 10;              // Grid spacing for initial sampling
+    
+    // Adaptive samples per phase
+    int samples_initial_grid = 5;            // Samples during initial grid phase
+    int samples_boundary_walking = 8;        // Samples during boundary detection
+    int samples_region_low_var = 5;          // Samples for low variance regions
+    int samples_region_med_var = 7;          // Samples for medium variance regions
+    int samples_region_high_var = 10;        // Samples for high variance regions
+    int samples_pattern_low_var = 3;         // Samples for known patterns
+    int samples_pattern_high_var = 12;       // Samples for uncertain patterns
+    
+    // Variance thresholds
+    double variance_threshold_high = 0.2;    // High variance threshold
+    double variance_threshold_medium = 0.1;  // Medium variance threshold
+    double variance_threshold_discontinuity = 0.15;  // Early discontinuity detection
+    
+    // Discontinuity detection
+    double gradient_threshold = 0.3;         // Value difference for discontinuity
+    int min_samples_for_discontinuity = 3;   // Minimum samples before checking
+    
+    // KNN prediction
+    int knn_k = 8;                          // Number of nearest neighbors
+    int neighbor_search_radius = 2;         // Radius for boundary neighbor search
+    
+    // Default constructor with current values
+    RegionModelConfig() = default;
+};
+
+/**
  * RegionModel - Discontinuity Detection and Pattern Replication
  * 
  * Strategy:
@@ -24,6 +57,7 @@
 class RegionModel : public Model {
 public:
     RegionModel(int dimensions, int dimensionSize, int totalQueries);
+    RegionModel(int dimensions, int dimensionSize, int totalQueries, const RegionModelConfig& config);
     ~RegionModel();
 
     std::vector<int> get_next_query() override;
@@ -71,6 +105,9 @@ private:
     };
 
     Phase current_phase = Phase::INITIAL_GRID;
+    
+    // Configuration
+    RegionModelConfig config;
     
     // Data storage
     std::unordered_map<int, SamplePoint> sampledPoints;
