@@ -8,9 +8,9 @@ StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, in
     shouldQuery = 200;
     scaleRatio = std::min(1.0, pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions));
     if (scaleRatio == 1) shouldQuery = totalQueries/(pow(dimensionSize, dimensions));
-    invScale = 1.5/scaleRatio;
+    invScale = 1/scaleRatio;
     scaledSize = floor(dimensionSize * scaleRatio);
-    shouldQuery = 1*shouldQuery;
+    shouldQuery = 1.5*shouldQuery;
     qt = new QueryTree(dimensions, scaledSize, 30);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
@@ -104,8 +104,8 @@ std::vector<int> StochasticQueryModel::get_next_query() {
 
 
 // Add a prior probability member to your class
-double priorProb = 0.4; // initial guess for unknown points
-double shrinkFactor = 1; // how strongly we shrink toward the prior
+double priorProb = 0.315; // initial guess for unknown points
+double shrinkFactor = 0.5; // how strongly we shrink toward the prior
 
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     if (result >= 0.9) wCount++;
