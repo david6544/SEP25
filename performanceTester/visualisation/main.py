@@ -330,7 +330,7 @@ def main():
     if args.functionFilepath:
         base_path = os.path.join("../../", args.functionFilepath)
     else:
-        base_path = "../../PerformanceData2:50"
+        base_path = "../../PerformanceData2:10"
 
     # Get overlay mode
     overlay_mode = args.overlay_mode

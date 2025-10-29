@@ -10,6 +10,9 @@
 #elif defined(RBF)
     #include "../src/Models/RBF.hpp"
     #define CurrentModel RBFModel
+#elif defined(STOCTREE)
+    #include "../src/Models/StochasticQueryModel.hpp"
+    #define CurrentModel StochasticQueryModel
 #elif defined(GEK)
     #include "../src/Models/GEKModel.hpp"
     #define CurrentModel GEKModel
@@ -37,7 +40,7 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
     FunctionSpace fspace(dimensions, dimensionSize, func);
     
     StateSpaceIO::set_IO(fspace, name, queries, stochastic);
-    InputOutput* io = InputOutput::get_instance();
+    StateSpaceIO* io = (StateSpaceIO*) InputOutput::get_instance();
 
     CurrentModel model(dimensions, dimensionSize, queries);
     
@@ -48,11 +51,10 @@ PerfResult runPerfTest(int dimensions, int dimensionSize, bool outputStateSpace,
 
         model.update_prediction(query, result);
     }
-    if (outputStateSpace){
-        io->output_state(model);
-    }
-    Results res = fspace.getResults(model);
-    return {name, res};
+    
+    io->output_state(model, outputStateSpace);
+
+    return {name, fspace.getAllResults().back()};
 }
 
 // Run model against all functions in testfunctions and output a table
@@ -78,7 +80,8 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
     std::vector<double> queryPercents = {0.3};
     
     if (stochastic) {
-        queryPercents = {1.5, 2};
+        // queryPercents = {0.3};
+        queryPercents = {0.3, 1.5, 2};
     }
 
     std::cout << std::fixed << std::setprecision(3);
@@ -113,7 +116,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
                       << std::setw(10) << r.results.percentCorrect() << " | "
                       << std::setw(12) << r.results.meanAbsoluteError() << " | "
                       << std::setw(12) << r.results.rootMeanSquaredError() << " | "
-                      << std::setw(14) << r.results.realMean << " | "
+                      << std::setw(14) << r.results.meanActual() << " | "
                       << std::setw(14) << r.results.meanPredicted() << " | "
                       << std::setw(12) << std::fixed << std::setprecision(3) << duration << " |\n";
             // Collect stats

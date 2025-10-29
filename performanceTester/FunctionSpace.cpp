@@ -51,48 +51,14 @@ double FunctionSpace::get(const std::vector<int>& coords) const {
     return this->spaceFunction(coords);
 }
 
-
-/**
- * Helper to get results out of the model for each query
- * Uncomment the lines below if you wish to see in-progress results
- */
-void FunctionSpace::getResultsHelper(Model& model, std::vector<int>& query, int index) {
-    /* std::cout << "\n";
-    std::cout << index << ": [";
-    for (int i = 0; i < query.size() - 1; i++) {
-        std::cout << query[i] << ", ";
-    }
-    std::cout << query[query.size()-1] << "] \n"; */
-    if (index == query.size()) {
-        return;
-    }
-    for (int i = 1; i < dimensionSize; i++) {
-        query[index] = i;
-        double actualResult = this->get(query);
-        double predictedResult = model.get_value_at(query);
-        /* 
-        std::cout << "result: " << actualResult << " - predicted: " << predictedResult << "\n";
-        */
-        this->results.updateResults(actualResult, predictedResult);
-        getResultsHelper(model, query, index + 1);
-    }
-    return;
+void FunctionSpace::resetResults(){
+    results = Results();
 }
 
-Results FunctionSpace::getResults(Model& model) {
-    results = Results();
+void FunctionSpace::updateResults(double predicted, double actual){
+    results.updateResults(actual, predicted);
+}
 
-    std::vector<int> initialQuery(dimensions, 0);
-
-    double actualResult = this->get(initialQuery);
-    double predictedResult = model.get_value_at(initialQuery);
-
-    this->results.updateResults(actualResult, predictedResult);
-
-    getResultsHelper(model, initialQuery, 0);
-
-    // Set realMean in results
-    this->results.realMean = getRealMean();
-    this->allResults.push_back(this->results);
-    return this->results;
+void FunctionSpace::submitResults(){
+    allResults.emplace_back(results);
 }

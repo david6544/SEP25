@@ -31,6 +31,8 @@ private:
     int dims, dimSize, leafSize;
     std::mt19937 rng{std::random_device{}()};
 
+    TreeNode* find_leaf(TreeNode* node, const std::vector<int>& query);
+
     std::vector<int> get_candidate(TreeNode* leaf);
     bool point_in_leaf(const std::vector<int>& query, const TreeNode* leaf);
 };
