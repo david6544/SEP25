@@ -17,7 +17,10 @@
     #define CurrentModel RBFModel
 #elif defined(STOCTREE)
     #include "Models/StochasticQueryModel.hpp"
-    #define CurrentModel StochasticQueryModel
+    #define CurrentModelStochasticQueryModel
+#elif defined(GEK)
+    #include "Models/GEKModel.hpp"
+    #define CurrentModel GEKModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
