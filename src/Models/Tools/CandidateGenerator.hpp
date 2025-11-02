@@ -51,7 +51,7 @@ private:
 
         bool removeCurrent = false;
 
-        if (idx < (int)query.size() - 1) {
+        if (idx < query.size() - 1) {
             if (itemPair.second) {
                 bool childEmpty = addHelper(query, itemPair.second, idx + 1);
                 if (childEmpty) {
@@ -66,10 +66,9 @@ private:
 
         if (removeCurrent) {
             auto lastPair = node->itemNode.back();
-            int lastValue = dimLimits[idx][0] + lastPair.first;
-            if (itemPos != (int)node->itemNode.size() - 1) {
+            if (itemPos != node->itemNode.size() - 1) {
                 node->itemNode[itemPos] = lastPair;
-                node->itemIdx[lastValue] = itemPos;
+                node->itemIdx[lastPair.first] = itemPos;
             }
             node->itemNode.pop_back();
             node->itemIdx.erase(query[idx]);
