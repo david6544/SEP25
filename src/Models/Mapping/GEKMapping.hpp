@@ -7,16 +7,31 @@
 #include <Eigen/Dense>
 
 /**
- * @brief GEKMapping implements Gradient-Enhanced Kriging interpolation.
- * 
- * This is a form of Gaussian process regression that can use local neighborhoods
- * for efficiency and supports periodic (cylindrical) boundary conditions.
+ * @file GEKMapping.hpp
+ * @brief Gradient-Enhanced Kriging mapping implementation (GEKMapping).
+ *
+ * @details
+ * High-level overview:
+ * GEKMapping implements a Gaussian-process-like interpolation that can
+ * optionally incorporate gradient information (where available) and use local
+ * neighborhoods for scalability. It supports periodic boundary conditions on
+ * specified axes to correctly compute distances on cylindrical/topologically
+ * wrapped spaces.
+ *
+ * Relation to the state-space mapping challenge:
+ * - GEKMapping is a model-based interpolator that can capture smooth
+ *   correlations across the state space and provide uncertainty estimates.
+ * - It is complementary to grid-based methods (Bilinear/Region) and often
+ *   performs well when enough sampled points are available to fit local
+ *   covariance structure.
+ * - Periodic support allows modeling cylindrical axes (e.g., angles or wrapped
+ *   coordinates) without introducing artificial discontinuities at boundaries.
  */
 class GEKMapping : public Mapping {
 public:
     /**
      * @brief Construct a new GEKMapping object
-     * 
+     *
      * @param data Vector of (value, coordinates) pairs from queried points
      * @param dimensions Number of dimensions in the space
      * @param dimensionSize Size of each dimension
@@ -29,11 +44,14 @@ public:
                bool use_local_neighborhood = true,
                int local_k = 64);
     
+    /**
+     * @brief Destroy the GEKMapping
+     */
     ~GEKMapping() override;
     
     /**
      * @brief Predict the value at a given query point using GEK interpolation
-     * 
+     *
      * @param query The coordinates to predict at
      * @return double The predicted value
      */
@@ -41,14 +59,14 @@ public:
     
     /**
      * @brief Configure which dimensions have periodic boundary conditions
-     * 
+     *
      * @param periodic Vector of booleans indicating which dimensions are periodic
      */
     void set_periodic_dimensions(const std::vector<bool>& periodic);
     
     /**
      * @brief Get the variance/uncertainty at a query point
-     * 
+     *
      * @param query The coordinates to evaluate uncertainty at
      * @return double The predicted variance
      */

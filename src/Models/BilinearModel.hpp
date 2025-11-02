@@ -2,6 +2,39 @@
 #ifndef BILINEAR_MODEL_H
 #define BILINEAR_MODEL_H
 
+/**
+ * @file BilinearModel.hpp
+ * @brief Bilinear interpolation model used for stochastic sampling and state-space mapping.
+ *
+ * @details
+ * High-level overview:
+ * The BilinearModel implements a sampling-and-interpolation strategy to map a
+ * discrete state space (2D or 3D) into estimated probability values. It
+ * performs stochastic sampling by issuing multiple queries per grid point,
+ * aggregates samples, and uses bilinear (2D) or trilinear (3D) interpolation to
+ * fill in values for unobserved coordinates. A KD-tree (KNNTree) is built from
+ * sampled points to support nearest-neighbour queries and N-dimensional fallbacks.
+ *
+ * Relation to the state-space mapping challenge:
+ * - The model trades off spatial coverage vs per-point accuracy by selecting
+ *   a grid stride and samples-per-point. Coverage helps capture discontinuities
+ *   in the function while repeated stochastic samples reduce variance at each
+ *   location.
+ * - For 3D spaces the Y-axis is treated as wrapping; the interpolation and
+ *   nearest-neighbour logic account for this when computing distances and
+ *   fractional interpolation coordinates.
+ * - Confidence metrics (based on sample count and variance) are cached to
+ *   prefer high-confidence estimates when available and fall back to KNN-based
+ *   interpolation otherwise.
+ *
+ * This header documents the public contract: generate queries via
+ * `get_next_query()`, record results with `update_prediction(...)`, and query
+ * estimates with `get_value_at(...)`.
+ *
+ * @author David
+ * @date 2025-11-02
+ */
+
 #include "Model.hpp"
 #include "Tools/KNNAlgorithm.hpp"
 #include <vector>
@@ -21,11 +54,52 @@
  */
 class BilinearModel : public Model {
 public:
+    /**
+     * @brief Construct a new BilinearModel
+     *
+     * @param dimensions number of dimensions (2 or 3)
+     * @param dimensionSize size of each dimension
+     * @param totalQueries total query budget for stochastic sampling
+     */
     BilinearModel(int dimensions, int dimensionSize, int totalQueries);
+
+    /**
+     * @brief Destroy the BilinearModel
+     */
     ~BilinearModel();
 
+    /**
+     * @brief Request the next stochastic query point.
+     *
+     * The model may return the same coordinate multiple times to collect
+     * repeated stochastic samples at a location. Callers should pass the
+     * observed value to `update_prediction`.
+     *
+     * @return std::vector<int> coordinate of the next query
+     */
     std::vector<int> get_next_query() override;
+
+    /**
+     * @brief Record the result of a query for a coordinate.
+     *
+     * Aggregates samples for the given coordinate (sum, sum of squares, count)
+     * and triggers KD-tree rebuild when sampling completes.
+     *
+     * @param query coordinate vector queried
+     * @param result observed probability value in [0,1]
+     */
     void update_prediction(const std::vector<int>& query, double result) override;
+
+    /**
+     * @brief Get the model's current estimate for a coordinate.
+     *
+     * Returns an exact averaged value if the coordinate has been sampled,
+     * otherwise uses bilinear/trilinear interpolation or KD-tree based
+     * interpolation as a fallback.
+     *
+     * @param query coordinate vector to estimate
+     * @return double estimated probability in [0,1]
+     */
     double get_value_at(const std::vector<int>& query) override;
 
 private:

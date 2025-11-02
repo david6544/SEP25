@@ -2,6 +2,35 @@
 #ifndef REGION_MODEL_H
 #define REGION_MODEL_H
 
+/**
+ * @file RegionModel.hpp
+ * @brief Region-based model for discontinuity detection and pattern replication.
+ *
+ * @details
+ * High-level overview:
+ * The RegionModel is designed to discover and map structure in a discrete
+ * state-space by explicitly detecting discontinuities (boundaries) and
+ * characterizing interior regions. It proceeds in phases: an initial coarse
+ * grid sampling to detect large-scale features, boundary walking to trace
+ * discontinuities, region filling to sample interiors with adaptive sampling
+ * based on observed variance, and an optional pattern-matching phase to
+ * replicate discovered patterns across similar regions.
+ *
+ * Relation to the state-space mapping challenge:
+ * - Prioritizes early detection of discontinuities so that sampling budget is
+ *   focused on boundaries where interpolation would fail.
+ * - Uses adaptive sampling counts per phase and per-point variance to allocate
+ *   more samples where uncertainty is high.
+ * - Integrates a KD-tree for spatial queries when interpolating or assigning
+ *   region membership; distances account for axis wrapping where applicable.
+ *
+ * Public contract: generate queries with `get_next_query()`, update samples
+ * with `update_prediction(...)`, and obtain estimates via `get_value_at(...)`.
+ *
+ * @author David
+ * @date 2025-11-02
+ */
+
 #include "Model.hpp"
 #include "Tools/KNNAlgorithm.hpp"
 #include <vector>
@@ -56,12 +85,62 @@ struct RegionModelConfig {
  */
 class RegionModel : public Model {
 public:
+    /**
+     * @brief Construct a new RegionModel with default configuration
+     *
+     * @param dimensions number of dimensions (e.g., 2 or 3)
+     * @param dimensionSize size of each dimension
+     * @param totalQueries total query budget
+     */
     RegionModel(int dimensions, int dimensionSize, int totalQueries);
+
+    /**
+     * @brief Construct a new RegionModel with custom configuration
+     *
+     * @param dimensions number of dimensions
+     * @param dimensionSize size of each dimension
+     * @param totalQueries total query budget
+     * @param config custom RegionModelConfig to override defaults
+     */
     RegionModel(int dimensions, int dimensionSize, int totalQueries, const RegionModelConfig& config);
+
+    /**
+     * @brief Destroy the RegionModel
+     */
     ~RegionModel();
 
+    /**
+     * @brief Get the next point to query according to the current phase and policy.
+     *
+     * The method manages phase transitions (initial grid -> boundary walking ->
+     * region filling -> pattern matching) and returns coordinates for the
+     * experiment driver to evaluate.
+     *
+     * @return std::vector<int> coordinate of the next query
+     */
     std::vector<int> get_next_query() override;
+
+    /**
+     * @brief Record an observed value for a coordinate.
+     *
+     * Aggregates samples, marks visited points, triggers boundary detection in
+     * the boundary walking phase, and updates region bookkeeping.
+     *
+     * @param query coordinate vector sampled
+     * @param result observed probability value in [0,1]
+     */
     void update_prediction(const std::vector<int>& query, double result) override;
+
+    /**
+     * @brief Return the model's current estimate for a coordinate.
+     *
+     * The model will prefer region-based predictions when available, then
+     * nearest-neighbour based predictions. If no data exists, returns a
+     * neutral fallback.
+     *
+     * @param query coordinate to estimate
+     * @return double estimated probability in [0,1]
+     */
     double get_value_at(const std::vector<int>& query) override;
 
 private:
