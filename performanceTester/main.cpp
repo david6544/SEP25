@@ -19,6 +19,9 @@
 #elif defined(REGION)
     #include "../src/Models/RegionModel.hpp"
     #define CurrentModel RegionModel
+#elif defined(GEK)
+    #include "../src/Models/GEKModel.hpp"
+    #define CurrentModel GEKModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
@@ -80,7 +83,7 @@ void runAllFunctions(int dimensions, int dimensionSize, bool outputStateSpace, b
         {testfunctions::rosenbrock, "Rosenbrock", "Valley Function"},
         {testfunctions::hyperEllipsoid, "HyperEllipsoid", "Bowl Function"}
     };
-    std::vector<double> queryPercents = {0.10, 0.25, 0.50, 0.75};
+    std::vector<double> queryPercents = {0.3};
     
     if (stochastic) {
         // queryPercents = {0.3};

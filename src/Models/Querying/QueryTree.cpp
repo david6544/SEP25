@@ -44,7 +44,7 @@ std::vector<int> QueryTree::get_candidate(TreeNode* leaf) {
         return mid;
     }
 
-    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(2);  // Absolute minimum
+    std::vector<std::vector<int>> candidates = leaf->cg->getCandidates(5);
 
     std::vector<int> bestPoint;
     double bestScore = -1.0;
@@ -107,14 +107,31 @@ std::vector<int> QueryTree::get_next_query() {
     return bestChoice.second;
 }
 
+TreeNode* QueryTree::find_leaf(TreeNode* node, const std::vector<int>& query) {
+    if (!node->left && !node->right)
+        return node;
+
+    if (node->splitDim == -1)
+        return node;
+
+    int splitDim = node->splitDim;
+    int splitValue = node->splitValue;
+
+    if (query[splitDim] <= splitValue && node->left)
+        return find_leaf(node->left, query);
+    else if (node->right)
+        return find_leaf(node->right, query);
+    else
+        return node; // fallback in case structure is incomplete
+}
+
 
 void QueryTree::update_prediction(const std::vector<int>& query, double result) {
     TreeNode* target = nullptr;
     if (nextLeaf.second != nullptr && query == this->nextLeaf.first)
         target = nextLeaf.second;
     else
-        for (auto leaf : leaves)
-            if (point_in_leaf(query, leaf)) { target = leaf; break; }
+        target = find_leaf(root, query);
 
     if (!target) target = root;
 

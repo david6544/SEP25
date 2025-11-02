@@ -13,12 +13,13 @@ struct CandidateNode {
     std::vector<std::pair<int, CandidateNode*>> itemNode;
 };
 
+static thread_local std::mt19937_64 rng(std::random_device{}());
+
 class CandidateGenerator {
 private:
     int dims;
     CandidateNode* root;
     const std::vector<std::vector<int>> dimLimits;
-    std::mt19937 rng{std::random_device{}()};
 
     CandidateNode* initDefaultNode(int idx) {
         CandidateNode* node = new CandidateNode();
@@ -94,25 +95,33 @@ public:
     }
 
     std::vector<std::vector<int>> getCandidates(int count) {
-        std::vector<std::vector<int>> candidates(count);
+        std::vector<std::vector<int>> candidates(count, std::vector<int>(dims));
         std::vector<CandidateNode*> runners(count, root);
 
-        for (int i = 0; i < dims; i++){
-            std::uniform_int_distribution<int> limitDist(dimLimits[i][0], dimLimits[i][1]);
-            for (int j = 0; j < count; j++){
-                if (runners[j] == nullptr || runners[j]->itemIdx.size() == 0){
-                    candidates[j].push_back(limitDist(rng));
+        for (int i = 0; i < dims; i++) {
+            int dimMin = dimLimits[i][0];
+            int dimRange = dimLimits[i][1] - dimLimits[i][0] + 1;
+
+            for (int j = 0; j < count; j++) {
+                CandidateNode* node = runners[j];
+
+                // fallback random value if node empty
+                if (!node || node->itemNode.empty()) {
+                    candidates[j][i] = dimMin + (rng() % dimRange);
                     continue;
                 }
-                std::uniform_int_distribution<int> dist(0, (int)runners[j]->itemNode.size() - 1);
-                int randIdx = dist(rng);
-                auto p = runners[j]->itemNode[randIdx];
+
+                // random index in available nodes
+                int randIdx = rng() % node->itemNode.size();
+                auto &p = node->itemNode[randIdx];
+
+                candidates[j][i] = dimMin + p.first;
                 runners[j] = p.second;
-                candidates[j].push_back(dimLimits[i][0] + p.first);
             }
         }
 
         return candidates;
     }
+
 };
 

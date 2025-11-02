@@ -24,6 +24,9 @@
 #elif defined(REGION)
     #include "../src/Models/RegionModel.hpp"
     #define CurrentModel RegionModel
+#elif defined(GEK)
+    #include "Models/GEKModel.hpp"
+    #define CurrentModel GEKModel
 #else
     #error "Algorthim was not defined please check readme for build instructions"
 #endif
