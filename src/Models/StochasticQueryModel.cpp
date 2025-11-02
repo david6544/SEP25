@@ -2,26 +2,16 @@
 #include "../InputOutput/InputOutput.hpp"
 
 
-
 StochasticQueryModel::StochasticQueryModel(int dimensions, int dimensionSize, int totalQueries) 
     : Model(dimensions, dimensionSize, totalQueries) {
     
-    // ULTRA-EXTREME sampling reduction for <30s total
-    shouldQuery = (dimensions >= 3) ? 3 : 2;  // Absolute minimum
-    
-    // Scale ratio calculation with better coverage for complex spaces
-    double targetPoints = ((double)totalQueries) / (shouldQuery * 1.0); // Minimal points
-    scaleRatio = pow(targetPoints / pow(dimensionSize, dimensions), 1.0/dimensions);
-    invScale = 1.0/scaleRatio;
-    scaledSize = std::max((dimensions >= 3 ? 3 : 2), (int)floor(dimensionSize * scaleRatio));
-    
-    // Absolute minimal repeats (12 for 3D, 8 for 2D)
-    shouldQuery = 4 * shouldQuery;
-    
-    // Very large leaf size for minimal tree operations
-    int leafSize = (dimensions >= 3) ? 20 : 25;
-    qt = new QueryTree(dimensions, scaledSize, leafSize);
-    
+    shouldQuery = 200;
+    scaleRatio = std::min(1.0, pow(((double) totalQueries)/(shouldQuery*pow(dimensionSize, dimensions)), 1.0/dimensions));
+    if (scaleRatio == 1) shouldQuery = totalQueries/(pow(dimensionSize, dimensions));
+    invScale = 1/scaleRatio;
+    scaledSize = floor(dimensionSize * scaleRatio);
+    shouldQuery = 1.5*shouldQuery;
+    qt = new QueryTree(dimensions, scaledSize, 30);
     totalPoints = pow(scaledSize, dimensions);
     queryWinTotal.resize(totalPoints);
     
@@ -67,16 +57,12 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
     static thread_local std::mt19937_64 rng(std::random_device{}());
 
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
-        int s = std::clamp(scaledQuery[i], 0, scaledSize - 1);
-        int lo = precomputedBounds[s].first;
-        int hi = precomputedBounds[s].second;
-        int range = hi - lo + 1;
-        
-        if (range <= 1) {
-            result[i] = lo;
-        } else {
-            result[i] = lo + (rng() % range);
-        }
+        int s = scaledQuery[i];
+        int r1 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        int r2 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        int r3 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        int r4 = (precomputedBounds[s].first + rng() % (precomputedBounds[s].second - precomputedBounds[s].first +1))/4;
+        result[i] = r1 + r2 + r3 + r4;
     }
     return result;
 }
@@ -85,7 +71,7 @@ std::vector<int> StochasticQueryModel::sample_unscaled_point_from_scaled(const s
 std::vector<int> StochasticQueryModel::unscale_midpoint(const std::vector<int>& scaledQuery) const {
     std::vector<int> unscaled(scaledQuery.size());
     for (size_t i = 0; i < scaledQuery.size(); ++i) {
-        int s = std::clamp(scaledQuery[i], 0, scaledSize - 1);
+        int s = scaledQuery[i];
         unscaled[i] = (precomputedBounds[s].first + precomputedBounds[s].second) / 2;
     }
     return unscaled;
@@ -117,59 +103,59 @@ std::vector<int> StochasticQueryModel::get_next_query() {
 }
 
 
+// Add a prior probability member to your class
+double priorProb = 0.315; // initial guess for unknown points
+double shrinkFactor = 0.3; // how strongly we shrink toward the prior
+
 void StochasticQueryModel::update_prediction(const std::vector<int>& query, double result) {
     if (result >= 0.9) wCount++;
     tCount++;
 
-    // ULTRA-EXTREME early stopping
-    // Stop after 25% samples if any confidence (>90% or <10%)
-    bool veryEarlyStop = (tCount > 0.25 * shouldQuery) && 
-                         (wCount >= 0.90 * tCount || wCount <= 0.10 * tCount);
-    
-    // Standard early stop after 40% if weak confidence (>85% or <15%)
-    bool earlyStop = (tCount > 0.40 * shouldQuery) && 
-                     (wCount >= 0.85 * tCount || wCount <= 0.15 * tCount);
-    
-    bool shouldUpdate = (tCount >= shouldQuery || currentQuery == totalQueries || veryEarlyStop || earlyStop);
-    
-    if (shouldUpdate && tCount > 0) {
-        queryWinTotal[currentQueryIDX] = {wCount, tCount};
-        double currentProb = double(wCount) / tCount;
-        qt->update_prediction(currentQueryPoint, currentProb);
+    if (tCount >= shouldQuery || (currentQuery == totalQueries && tCount >= 0.75 * shouldQuery)) {
+        
+        // compute raw probability
+        double rawProb = double(wCount) / tCount;
+
+        // shrink toward prior to reduce variance
+        double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
+
+        queryWinTotal[currentQueryIDX] = { wCount, tCount };
+        qt->update_prediction(currentQueryPoint, prob);
+
+        // reset counters
         wCount = tCount = repeatQueries = 0;
     }
 
-    // When we've processed all overall queries, build the interpolator
     if (currentQuery >= totalQueries) {
-        // Pre-allocate for efficiency
-        data.reserve(totalPoints / 2);
-        
-        for (size_t i = 0; i < queryWinTotal.size(); i++) {
-            if (queryWinTotal[i].empty() || queryWinTotal[i][1] == 0) continue;
-            double prob = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
-            data.emplace_back(prob, unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize)));
-        }
-        
-        // Determine wrap axis: y-axis (index 1) for 3D, x-axis (index 0) for 2D
-        int wrapAxis = (dimensions == 3) ? 1 : (dimensions == 2 ? 0 : -1);
-        
-        // ULTRA-EXTREME neighbor reduction
-        double densityRatio = (double)data.size() / totalPoints;
-        int baseNeigh = 6 + dimensions * 1; // Absolute minimum: 9 for 3D, 8 for 2D
-        int neigh = std::clamp((int)(baseNeigh * densityRatio), 
-                               (dimensions >= 3 ? 5 : 4), 
-                               25);  // Extremely low max
+        // build interpolator
+        data.clear();
+        for (int i = 0; i < queryWinTotal.size(); i++) {
+            if (queryWinTotal[i].empty()) continue;
 
-        
-        // Higher power for better discontinuity handling, smaller offset for complex spaces
-        int adaptivePower = (dimensions >= 3) ? 2 : 1;
-        double adaptiveOffset = (dimensions >= 3) ? 0.03 : 0.05;  // Tighter for 3D
-        
-        maper = new IDW(data, neigh, adaptivePower, adaptiveOffset, wrapAxis, dimensionSize);
+            double rawProb = double(queryWinTotal[i][0]) / queryWinTotal[i][1];
+            double prob = shrinkFactor * rawProb + (1.0 - shrinkFactor) * priorProb;
+
+            // clamp predictions to avoid extremes
+            // prob = std::clamp(prob, 0.05, 0.95);
+
+            std::vector<int> cQ = unscale_midpoint(InputOutput::index_to_coords(i, dimensions, scaledSize));
+            data.emplace_back(prob, cQ);
+
+            // optional wraparound for Y-dimension
+            cQ[1] -= dimensionSize;
+            data.emplace_back(prob, cQ);
+            cQ[1] += 2 * dimensionSize;
+            data.emplace_back(prob, cQ);
+        }
+
+        int neigh = std::clamp(0.01 * data.size(), 2.0, 8.0);
+        maper = new IDW(data, neigh, 2, 0.1);
     }
 }
 
+// Modified get_value_at to fallback to prior if IDW is not ready
 double StochasticQueryModel::get_value_at(const std::vector<int>& query) {
-    if (!maper) return 0.0; // Return default value if interpolator not yet initialized
-    return maper->predict(query);
+    if (!maper) return priorProb; // fallback
+    double val = maper->predict(query);
+    return val;
 }
