@@ -21,23 +21,15 @@ DumbModel::DumbModel(int dimensions, int dimensionSize, int totalQueries) :
 }
 
 std::vector<int> DumbModel::get_next_query() {
-    int D = this->stateSpace->get_dimensions();
-    int K = this->stateSpace->get_dimension_size();
-    std::vector<int> nextQuery(D, 0);
-
-    for (auto &var : nextQuery){
-        var = std::rand() % K;
-    }
-
-    return nextQuery;
+    return {0,0,0};
 }
 
 void DumbModel::update_prediction(const std::vector<int> &query, double result) {
-    stateSpace->set(query, result);
+    return;
 }
 
 double DumbModel::get_value_at(const std::vector<int> &query) {
-    return this->stateSpace->get(query);
+    return 0.335;
 }
 
 #endif // DUMB || TESTING
